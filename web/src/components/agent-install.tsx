@@ -13,14 +13,22 @@ function controlPlaneURL(): string {
   return "https://runix.example.com";
 }
 
-// AgentInstall renders the complete, copy-paste command that enrolls an
-// agent: control-plane URL plus the one-time token.
+// The installer is published as a release asset, so a new host needs
+// nothing but curl — no binary to fetch or unpack first.
+const INSTALLER_URL =
+  process.env.NEXT_PUBLIC_INSTALLER_URL ??
+  "https://github.com/svesnav/Runix/releases/latest/download/install.sh";
+
+// AgentInstall renders the complete, copy-paste command that installs and
+// enrolls an agent: the installer, the control-plane URL, and the
+// one-time token.
 export function AgentInstall({ token }: { token: string }) {
   const [copied, setCopied] = useState(false);
   const command =
-    `RUNIX_AGENT_SERVER_URL=${controlPlaneURL()} \\\n` +
-    `RUNIX_AGENT_TOKEN=${token} \\\n` +
-    `./runix-agent`;
+    `curl -fsSL ${INSTALLER_URL} | sudo sh -s -- \\\n` +
+    `  --role agent \\\n` +
+    `  --url ${controlPlaneURL()} \\\n` +
+    `  --token ${token}`;
 
   const copy = async () => {
     await navigator.clipboard.writeText(command);

@@ -51,18 +51,17 @@ jobs:
             done
           done
 
-      - name: Stage install scripts
-        # Published as release assets so a host can bootstrap with a single
-        # curl, without cloning the repo. install.sh downloads the other
-        # two at run time, so all three must be attached.
-        run: cp scripts/install.sh scripts/install-server.sh scripts/install-agent.sh dist/
+      - name: Stage the installer
+        # Published as a release asset so a host can bootstrap with a
+        # single curl, without cloning the repo.
+        run: cp scripts/install.sh dist/
 
       - name: Checksums
         # The installers verify their download against this file, and the
         # agent self-update path refuses any download without a matching
         # checksum. Globbed by name rather than './*' so the file being
         # written is not itself hashed.
-        run: cd dist && sha256sum runix-* install-* > SHA256SUMS && cat SHA256SUMS
+        run: cd dist && sha256sum runix-* install.sh > SHA256SUMS && cat SHA256SUMS
 
       - name: Publish release
         uses: softprops/action-gh-release@v2

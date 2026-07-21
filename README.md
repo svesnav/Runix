@@ -77,12 +77,21 @@ curl -fsSL .../install.sh | sudo sh -s -- --role agent \
 safe default — the role, an agent's URL and token — still fail loudly
 rather than guessing.
 
-`install.sh` is a front end: it collects answers, then hands them to
-`install-server.sh` and `install-agent.sh`, which remain usable directly
-for configuration management. Each downloads the matching `linux/amd64` or
-`linux/arm64` binary from the GitHub release, installs under `/opt/runix`,
-and sets up a systemd service. Re-running any of them upgrades in place
-and keeps the existing configuration.
+There is one installer and one release asset. It downloads the matching
+`linux/amd64` or `linux/arm64` binaries from the GitHub release, verifies
+them against the release's `SHA256SUMS`, installs under `/opt/runix`, and
+sets up systemd services.
+
+Re-running it upgrades in place. It reads what the host already is and
+does not ask again, so an upgrade is just:
+
+```sh
+curl -fsSL .../install.sh | sudo sh -s -- -y
+```
+
+The JWT and encryption secrets, the admin password, the database password
+and the agent's enrollment token are all preserved — rotating the first two
+would invalidate every session and make stored TOTP secrets unreadable.
 
 The install root is a single directory:
 
@@ -93,28 +102,24 @@ The install root is a single directory:
 /opt/runix/agent/        supervised daemon state           (agent only)
 ```
 
-The server installer provisions PostgreSQL by default: it writes a Compose
-file, generates a password, waits for `pg_isready`, and derives the DSN.
-The container is published on `127.0.0.1` only. Pass `--dsn` to use a
-database you already run, or `--no-postgres` to manage it yourself. Use
-`--pg-port` if 5432 is taken.
+For control-plane roles it provisions PostgreSQL by default: it writes a
+Compose file, generates a password, waits for `pg_isready`, and derives
+the DSN. The container is published on `127.0.0.1` only. Pass `--dsn` to
+use a database you already run. Use `--pg-port` if 5432 is taken.
 
-Useful flags: `--binary PATH` installs a local build instead of
-downloading; `--version` pins a release; `--repo OWNER/NAME` and
-`--github-token` point at a fork or a private repository; `--prefix`
-changes the install root. Downloads are verified against the release's
-`SHA256SUMS`.
+Useful flags: `--server-binary` / `--agent-binary` install local builds
+instead of downloading; `--version` pins a release; `--repo OWNER/NAME`
+and `--github-token` point at a fork or a private repository; `--prefix`
+changes the install root; `--no-start` configures without starting.
+`sh install.sh --help` lists them all.
 
-Secrets are generated once and preserved across upgrades — the JWT and
-encryption keys are never rotated by an upgrade, since that would
-invalidate every session and orphan stored TOTP secrets. Hosts installed
-before the `/opt` layout have their config migrated from `/etc/runix`
-automatically, keeping the agent's existing data directory so supervised
-daemons are not orphaned.
+Hosts installed before the `/opt` layout have their config migrated from
+`/etc/runix` automatically, keeping the agent's existing data directory so
+supervised daemons are not orphaned.
 
 Tagging `v*` runs `.github/workflows/release.yml`, which builds all four
-binaries, publishes `SHA256SUMS`, and attaches the install scripts. The
-asset names (`runix-server_linux_amd64`, …) are the installers' contract —
+binaries, publishes `SHA256SUMS`, and attaches `install.sh`. The asset
+names (`runix-server_linux_amd64`, …) are the installer's contract —
 renaming them breaks every installed host.
 
 ## Quick start (development)
@@ -207,6 +212,6 @@ internal/server/       HTTP transport assembly (middleware, routing, lifecycle)
 migrations/            embedded PostgreSQL migrations
 web/                   Next.js frontend (TypeScript, Tailwind, TanStack Query)
 web/src/i18n/          UI translations (en, ru) — add a locale by adding a file
-scripts/               install.sh (interactive front end) + the two component installers
+scripts/               install.sh — the installer (control plane, agent, or both)
 docs/                  architecture and design documents
 ```
