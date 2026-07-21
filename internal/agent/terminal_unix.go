@@ -14,11 +14,8 @@ import (
 
 // openHostTerminal starts the login shell on a PTY.
 func openHostTerminal(cols, rows uint16) (rt.Terminal, error) {
-	shell := os.Getenv("SHELL")
-	if shell == "" {
-		shell = "/bin/sh"
-	}
-	cmd := exec.Command(shell, "-l")
+	shell := resolveShell()
+	cmd := exec.Command(shell, shellArgs(shell)...)
 	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
 
 	f, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: cols, Rows: rows})

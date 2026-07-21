@@ -43,14 +43,15 @@ export function ContextMenu({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    window.addEventListener("click", close);
-    window.addEventListener("contextmenu", close);
+    // A context-menu event is also the event that opens this component. A
+    // global contextmenu listener can close a freshly opened menu before it
+    // is painted. Pointer down still dismisses the previous menu first.
+    window.addEventListener("pointerdown", close);
     window.addEventListener("resize", close);
     window.addEventListener("scroll", close, true);
     window.addEventListener("keydown", onKey);
     return () => {
-      window.removeEventListener("click", close);
-      window.removeEventListener("contextmenu", close);
+      window.removeEventListener("pointerdown", close);
       window.removeEventListener("resize", close);
       window.removeEventListener("scroll", close, true);
       window.removeEventListener("keydown", onKey);

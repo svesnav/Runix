@@ -173,6 +173,11 @@ export const en = {
     clipboardHint: "· Ctrl+Shift+C copy · Ctrl+Shift+V / right-click paste",
     shellInside: "Shell inside",
     sessionEnded: "session ended",
+    copy: "Copy",
+    paste: "Paste",
+    pasteWithCtrlV: "Paste (press Ctrl+V)",
+    selectAll: "Select all",
+    copiedToClipboard: "Copied to clipboard",
     daemonForm: {
       command: "Command (executable path)",
       arguments: "Arguments",

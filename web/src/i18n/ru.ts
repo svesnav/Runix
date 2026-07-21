@@ -136,6 +136,11 @@ export const ru: Dictionary = {
     },
   },
   runtimes: {
+    copy: "Копировать",
+    paste: "Вставить",
+    pasteWithCtrlV: "Вставить (нажмите Ctrl+V)",
+    selectAll: "Выделить всё",
+    copiedToClipboard: "Скопировано в буфер обмена",
     daemons: "Демоны",
     docker: "Docker",
     compose: "Compose",
