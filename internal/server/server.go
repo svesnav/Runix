@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,7 @@ import (
 	"github.com/runix/runix/internal/modules/health"
 	"github.com/runix/runix/internal/platform/config"
 	"github.com/runix/runix/internal/platform/version"
+	"github.com/runix/runix/internal/webui"
 )
 
 // Server assembles the control-plane HTTP transport: middleware chain,
@@ -35,9 +37,21 @@ func New(cfg config.Server, log *slog.Logger) *Server {
 
 	engine := gin.New()
 	engine.Use(RequestID(), AccessLog(log), Recovery(log), CORS(cfg.CORSOrigins))
+
+	// Anything that is not an API route is the operator console, served
+	// from the binary. API paths keep answering JSON so a mistyped
+	// endpoint does not hand a client a page of HTML.
+	ui := webui.Handler()
 	engine.NoRoute(func(c *gin.Context) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		ui.ServeHTTP(c.Writer, c.Request)
 	})
+	if !webui.Built() {
+		log.Warn("no web UI compiled into this binary; serving the API only")
+	}
 
 	healthSvc := health.NewService()
 	health.RegisterRoutes(engine, health.NewHandler(healthSvc))

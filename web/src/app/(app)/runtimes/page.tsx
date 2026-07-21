@@ -2,13 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import {
   ChevronLeft, FolderOpen, KeyRound, Pencil, Play, Power, RotateCw, Square, Trash2, Zap,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { formatDate, stateBadge } from "@/lib/format";
+import { serverPath } from "@/lib/routes";
 import type { ComposeInspect, DaemonInspect, RuntimeInfo } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,11 +25,25 @@ import { RuntimeTerminal } from "@/components/server/runtime-terminal";
 import { GrantDialog } from "@/components/grant-dialog";
 import { useT } from "@/i18n";
 
+// useSearchParams suspends, so the page body sits behind a boundary.
 export default function RuntimeDetailPage() {
-  const { id: serverId, type, rid } = useParams<{ id: string; type: string; rid: string }>();
+  return (
+    <Suspense fallback={<p className="text-sm text-ink-dim">Loading…</p>}>
+      <RuntimeDetail />
+    </Suspense>
+  );
+}
+
+function RuntimeDetail() {
   const router = useRouter();
+  const params = useSearchParams();
   const queryClient = useQueryClient();
-  const decodedRid = decodeURIComponent(rid);
+  const serverId = params.get("server") ?? "";
+  const type = params.get("type") ?? "";
+  const rid = params.get("rid") ?? "";
+  // Already decoded by URLSearchParams; kept as a name so the query keys
+  // and API paths below read the same as before.
+  const decodedRid = rid;
   const [editOpen, setEditOpen] = useState(false);
   const [grantOpen, setGrantOpen] = useState(false);
   const [pane, setPane] = useState<"logs" | "terminal">("logs");
@@ -62,7 +77,7 @@ export default function RuntimeDetailPage() {
 
   return (
     <div className="space-y-4">
-      <Link href={`/servers/${serverId}?tab=runtimes`} className="inline-flex items-center gap-1 text-xs text-ink-dim hover:text-ink">
+      <Link href={serverPath(serverId, { tab: "runtimes" })} className="inline-flex items-center gap-1 text-xs text-ink-dim hover:text-ink">
         <ChevronLeft size={14} /> Back to {d.type} runtimes
       </Link>
 
@@ -102,7 +117,7 @@ export default function RuntimeDetailPage() {
             <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}><Pencil size={13} /> {t.common.edit}</Button>
           )}
           {filesDir && (
-            <Link href={`/servers/${serverId}?tab=files&path=${encodeURIComponent(filesDir)}`}>
+            <Link href={serverPath(serverId, { tab: "files", path: filesDir })}>
               <Button size="sm" variant="outline"><FolderOpen size={13} /> {t.runtimes.browseFiles}</Button>
             </Link>
           )}
@@ -115,7 +130,7 @@ export default function RuntimeDetailPage() {
             <Button size="sm" variant="danger"
               onClick={() => {
                 if (confirm(`Remove ${type} runtime "${d.name}"?`)) {
-                  remove.mutate({ type, id: decodedRid }, { onSuccess: () => router.replace(`/servers/${serverId}?tab=runtimes`) });
+                  remove.mutate({ type, id: decodedRid }, { onSuccess: () => router.replace(serverPath(serverId, { tab: "runtimes" })) });
                 }
               }}>
               <Trash2 size={13} /> {t.common.remove}

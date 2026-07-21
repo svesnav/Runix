@@ -1,11 +1,12 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { KeyRound, Pencil, Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { stateBadge } from "@/lib/format";
+import { serverPath } from "@/lib/routes";
 import type { Server } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,14 +29,14 @@ export default function ServerDetailPage() {
 }
 
 function ServerDetail() {
-  const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const params = useSearchParams();
   const queryClient = useQueryClient();
 
+  const id = params.get("id") ?? "";
   const tab = params.get("tab") ?? "overview";
   const filePath = params.get("path") ?? "/";
-  const setTab = (next: string) => router.replace(`/servers/${id}?tab=${next}`);
+  const setTab = (next: string) => router.replace(serverPath(id, { tab: next }));
 
   const [rotated, setRotated] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);

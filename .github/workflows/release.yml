@@ -29,6 +29,24 @@ jobs:
         with:
           go-version: "1.25.x"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # The control plane serves the operator console from inside the
+      # binary, so the UI must be exported and staged before `go build`.
+      - name: Build and embed the web UI
+        run: |
+          set -eu
+          npm --prefix web ci
+          npm --prefix web run build
+          rm -rf internal/webui/dist
+          cp -r web/out internal/webui/dist
+          test -f internal/webui/dist/index.html
+          echo "embedded $(du -sh internal/webui/dist | cut -f1) of UI"
+
       - name: Build binaries
         env:
           CGO_ENABLED: "0"

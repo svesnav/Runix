@@ -6,10 +6,12 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/runix/runix/internal/platform/config"
+	"github.com/runix/runix/internal/webui"
 )
 
 func newTestServer(t *testing.T) *Server {
@@ -55,13 +57,48 @@ func TestVersionEndpoint(t *testing.T) {
 	}
 }
 
-func TestUnknownRouteReturnsJSON404(t *testing.T) {
-	w := get(t, newTestServer(t), "/nope")
+// An unknown API path must stay JSON: clients parse these, and handing
+// them a page of HTML turns a typo into a confusing decode error.
+func TestUnknownAPIRouteReturnsJSON404(t *testing.T) {
+	w := get(t, newTestServer(t), "/api/v1/nope")
 	if w.Code != http.StatusNotFound {
-		t.Fatalf("GET /nope = %d, want 404", w.Code)
+		t.Fatalf("GET /api/v1/nope = %d, want 404", w.Code)
 	}
 	var body map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
 		t.Fatalf("404 body is not JSON: %v", err)
+	}
+}
+
+// The regression this guards: the control plane used to answer 404 at /,
+// so operators who opened the URL after installing saw nothing at all.
+func TestRootServesTheWebUI(t *testing.T) {
+	w := get(t, newTestServer(t), "/")
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET / = %d, want 200", w.Code)
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Errorf("Content-Type = %q, want text/html", ct)
+	}
+	if !strings.Contains(w.Body.String(), "<html") {
+		t.Errorf("body is not HTML: %.120s", w.Body.String())
+	}
+}
+
+// A non-API path that does not exist is a UI URL, so it gets the UI's own
+// 404 page rather than a JSON error.
+func TestUnknownUIRouteServesHTML(t *testing.T) {
+	w := get(t, newTestServer(t), "/nope")
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("GET /nope = %d, want 404", w.Code)
+	}
+	// The exported 404 page only exists in a build that embedded the UI;
+	// a bare checkout compiles against the placeholder, and CI runs the
+	// tests without building the frontend first.
+	if !webui.Built() {
+		t.Skip("no UI embedded in this build")
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Errorf("Content-Type = %q, want text/html", ct)
 	}
 }

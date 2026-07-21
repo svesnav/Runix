@@ -12,7 +12,10 @@ LDFLAGS := -s -w \
 BINARIES  := runix-server runix-agent
 PLATFORMS := linux/amd64 linux/arm64
 
-.PHONY: all build test vet lint tidy release clean web-install web-build web-dev
+WEBUI_DIST := internal/webui/dist
+
+.PHONY: all build test vet lint tidy release release-binaries web-embed clean \
+        web-install web-build web-dev
 
 all: build
 
@@ -34,8 +37,18 @@ lint:
 tidy:
 	$(GO) mod tidy
 
+# Export the UI and stage it where internal/webui embeds it from. The
+# control plane is one binary, so this has to happen before `go build`;
+# a checkout without it still compiles, against a placeholder page.
+web-embed: web-build
+	rm -rf $(WEBUI_DIST)
+	cp -r web/out $(WEBUI_DIST)
+
+# Everything a release needs: UI embedded, then static builds.
+release: web-embed release-binaries
+
 # Static, CGO-free release builds for every supported platform.
-release:
+release-binaries:
 	@for p in $(PLATFORMS); do \
 		os=$${p%/*}; arch=$${p#*/}; \
 		for b in $(BINARIES); do \

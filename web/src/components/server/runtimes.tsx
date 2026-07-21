@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Play, Plus, RotateCw, Square } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import { runtimePath } from "@/lib/routes";
 import { stateBadge, timeAgo } from "@/lib/format";
 import type { RuntimeInfo } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -76,7 +77,7 @@ function RuntimeTypePanel({ serverId, type }: { serverId: string; type: string }
 
   const creatable = type === "daemon" || type === "docker" || type === "compose";
   const open = (rt: RuntimeInfo) =>
-    router.push(`/servers/${serverId}/runtimes/${type}/${encodeURIComponent(rt.descriptor.id)}`);
+    router.push(runtimePath(serverId, type, rt.descriptor.id));
 
   return (
     <div className="space-y-3">

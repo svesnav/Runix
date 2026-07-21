@@ -23,3 +23,9 @@ web/node_modules/
 web/.next/
 # TypeScript's incremental build cache: rewritten by every build.
 web/tsconfig.tsbuildinfo
+web/out/
+
+# The exported UI is staged here for go:embed at build time. Only the
+# placeholder is tracked, so a bare checkout still compiles.
+internal/webui/dist/*
+!internal/webui/dist/index.html

@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- runix-webui-placeholder
+
+     This file exists so `go build ./...` works in a checkout where the UI
+     has not been compiled: go:embed fails outright if its directory is
+     missing. A real build (`make web-embed` or the release workflow)
+     replaces this directory with the exported Next app.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Runix — UI not built</title>
+    <style>
+      body { margin: 0; display: grid; place-items: center; min-height: 100vh;
+             background: #0a0e14; color: #e5e9f0;
+             font: 15px/1.6 ui-sans-serif, system-ui, sans-serif; }
+      main { max-width: 34rem; padding: 2rem; }
+      h1 { font-size: 1.1rem; margin: 0 0 .75rem; }
+      p { color: #9aa5b1; margin: 0 0 .75rem; }
+      code { background: #131820; border: 1px solid #1f2733; border-radius: 4px;
+             padding: .15rem .4rem; font-size: .85em; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>This build has no web UI</h1>
+      <p>
+        The control plane is running and its API is served under
+        <code>/api/v1</code>, but the operator console was not compiled into
+        this binary.
+      </p>
+      <p>
+        Release builds include it. To build one yourself, run
+        <code>make web-embed</code> before <code>make build</code>.
+      </p>
+    </main>
+  </body>
+</html>

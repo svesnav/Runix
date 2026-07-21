@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import { serverPath } from "@/lib/routes";
 import { stateBadge, timeAgo } from "@/lib/format";
 import type { ListResponse, Server, ServerCreated } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -74,7 +75,7 @@ export default function ServersPage() {
               <TR
                 key={srv.id}
                 className="cursor-pointer hover:bg-card/60"
-                onClick={() => router.push(`/servers/${srv.id}`)}
+                onClick={() => router.push(serverPath(srv.id))}
               >
                 <TD className="font-medium">{srv.name}</TD>
                 <TD><Badge className={stateBadge(srv.connectionStatus)}>{srv.connectionStatus.replace("_", " ")}</Badge></TD>
