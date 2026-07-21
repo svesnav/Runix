@@ -21,3 +21,5 @@ coverage.html
 # Frontend (added when web/ lands)
 web/node_modules/
 web/.next/
+# TypeScript's incremental build cache: rewritten by every build.
+web/tsconfig.tsbuildinfo
