@@ -40,7 +40,9 @@ public IP.
 One command. It asks what the host should be, then does the rest:
 
 ```sh
-curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install.sh | sudo sh
+curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install.sh -o install.sh
+chmod +x install.sh
+./install.sh
 ```
 
 ```
@@ -64,10 +66,14 @@ Every question is also a flag, so the same script works from Ansible or CI:
 
 ```sh
 # Single-host install, no questions asked
-curl -fsSL .../install.sh | sudo sh -s -- --role all-in-one --yes
+curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install.sh -o install.sh
+chmod +x install.sh
+./install.sh--role all-in-one --yes
 
 # Agent joining an existing control plane
-curl -fsSL .../install.sh | sudo sh -s -- --role agent \
+curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install.sh -o install.sh
+chmod +x install.sh
+./install.sh--role all-in-one --yes --role agent \
     --url https://runix.example.com --token rnx_agt_...
 ```
 
@@ -79,7 +85,9 @@ being guessed.
 ask again:
 
 ```sh
-curl -fsSL .../install.sh | sudo sh -s -- -y
+curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install.sh -o install.sh
+chmod +x install.sh
+./install.sh -y
 ```
 
 The JWT and encryption secrets, admin password, database password and the
@@ -108,7 +116,7 @@ release's `SHA256SUMS`; a mismatch aborts before anything is installed.
 | `--prefix` | Change the install root |
 | `--no-start` | Configure everything, start nothing |
 
-`sh install.sh --help` lists them all.
+`./install.sh --help` lists them all.
 
 </details>
 
