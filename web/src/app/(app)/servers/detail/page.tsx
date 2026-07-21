@@ -173,7 +173,7 @@ function EditServerDialog({
   return (
     <Dialog open onClose={onClose} title={t.servers.editTitle}>
       <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4">
           <Field label={t.common.name}><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
         </div>
         <Field label={t.servers.location}><Input value={location} onChange={(e) => setLocation(e.target.value)} /></Field>
