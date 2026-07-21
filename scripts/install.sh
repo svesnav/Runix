@@ -15,7 +15,7 @@
 # and the values you would have typed, and nothing is prompted.
 #
 # POSIX sh on purpose: minimal images often have no bash.
-#set -eu
+
 set -eu
 
 PREFIX=${RUNIX_PREFIX:-/opt/runix}
