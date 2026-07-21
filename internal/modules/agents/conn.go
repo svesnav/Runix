@@ -16,8 +16,13 @@ import (
 )
 
 const (
-	helloTimeout  = 10 * time.Second
-	readTimeout   = 120 * time.Second
+	helloTimeout = 10 * time.Second
+	// Four missed heartbeats. Safe to deadline this side because the
+	// traffic actually flows this way: the agent heartbeats on a timer
+	// whether or not anything is happening. The reverse is not true, so
+	// the agent must not deadline its own read — see keepaliveLoop in
+	// internal/agent/session.go.
+	readTimeout   = 4 * heartbeatSeconds * time.Second
 	writeTimeout  = 15 * time.Second
 	maxFrameBytes = 32 << 20
 	sendQueueSize = 256

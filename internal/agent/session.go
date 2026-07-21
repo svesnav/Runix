@@ -17,6 +17,14 @@ import (
 const (
 	welcomeTimeout = 15 * time.Second
 	writeTimeout   = 15 * time.Second
+	// How long a keepalive ping may go unanswered before the connection is
+	// treated as dead. Scaled to the negotiated heartbeat so the check
+	// stays proportional, but bounded: the ceiling keeps a busy control
+	// plane under a large log stream from being mistaken for an absent
+	// one, and the floor keeps a very short interval from turning a
+	// scheduling hiccup into a disconnect.
+	minPingTimeout = time.Second
+	maxPingTimeout = 20 * time.Second
 	maxFrameBytes  = 32 << 20
 	sendQueueSize  = 256
 )
@@ -87,9 +95,16 @@ func (a *Agent) runSession(ctx context.Context) error {
 	a.log.Info("connected to control plane", "server_id", welcome.ServerID, "heartbeat", interval)
 
 	go s.heartbeatLoop(sessCtx, interval)
+	go s.keepaliveLoop(sessCtx, cancelSess, interval)
 
+	// No read deadline here. Traffic on this socket is one-directional
+	// when nothing is happening: the agent heartbeats to the control
+	// plane, which has nothing to say back until an operator asks for
+	// something. A deadline on this read would therefore fire on every
+	// idle connection — which it did, dropping and reconnecting agents
+	// every couple of minutes. Liveness is keepaliveLoop's job.
 	for {
-		env, err := s.read(sessCtx, 3*interval)
+		env, err := s.read(sessCtx, 0)
 		if err != nil {
 			return err
 		}
@@ -114,9 +129,15 @@ func (s *session) shutdown() {
 	s.mu.Unlock()
 }
 
+// read waits for the next frame. A timeout of 0 means "however long the
+// session lasts" — used for the main loop, where silence is normal.
 func (s *session) read(ctx context.Context, timeout time.Duration) (protocol.Envelope, error) {
-	readCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	readCtx := ctx
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		readCtx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
 	_, data, err := s.ws.Read(readCtx)
 	if err != nil {
 		return protocol.Envelope{}, err
@@ -151,6 +172,52 @@ func (s *session) writePump(ctx context.Context) {
 			cancel()
 			if err != nil {
 				_ = s.ws.CloseNow()
+				return
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// keepaliveLoop proves the control plane is still there.
+//
+// Heartbeats only prove the agent can *write*, which a half-open socket
+// happily accepts, so they cannot tell a live control plane from one that
+// vanished. A WebSocket ping is answered by the peer's protocol layer, so
+// a returning pong is positive evidence — and unlike a read deadline it
+// does not depend on the control plane having something to say.
+//
+// Note that ping/pong is invisible to Read: the library handles those
+// frames while the main loop is blocked, which is exactly why liveness
+// belongs here rather than in a deadline on that read.
+func pingDeadline(interval time.Duration) time.Duration {
+	switch d := 2 * interval; {
+	case d < minPingTimeout:
+		return minPingTimeout
+	case d > maxPingTimeout:
+		return maxPingTimeout
+	default:
+		return d
+	}
+}
+
+func (s *session) keepaliveLoop(ctx context.Context, cancel context.CancelFunc, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	timeout := pingDeadline(interval)
+	for {
+		select {
+		case <-ticker.C:
+			pingCtx, done := context.WithTimeout(ctx, timeout)
+			err := s.ws.Ping(pingCtx)
+			done()
+			if err != nil {
+				if ctx.Err() != nil {
+					return // the session is going away anyway
+				}
+				s.agent.log.Warn("control plane did not answer keepalive", "err", err)
+				cancel()
 				return
 			}
 		case <-ctx.Done():
