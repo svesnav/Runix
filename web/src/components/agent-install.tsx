@@ -27,8 +27,8 @@ export function AgentInstall({ token }: { token: string }) {
   const t = useT();
   const [copied, setCopied] = useState(false);
   const command =
-    `curl -fsSL  ${INSTALLER_URL} -o install.sh\\\n` +
-    `chmod +x install.sh `+
+    `curl -fsSL ${INSTALLER_URL} -o install.sh \\\n` +
+    `chmod +x install.sh \\\n`+
     `./install.sh --role agent --url ${controlPlaneURL()} --token ${token}`;
 
   const copy = async () => {
