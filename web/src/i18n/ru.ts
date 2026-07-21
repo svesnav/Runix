@@ -136,6 +136,11 @@ export const ru: Dictionary = {
     },
   },
   runtimes: {
+    copy: "Копировать",
+    paste: "Вставить",
+    pasteWithCtrlV: "Вставить (нажмите Ctrl+V)",
+    selectAll: "Выделить всё",
+    copiedToClipboard: "Скопировано в буфер обмена",
     daemons: "Демоны",
     docker: "Docker",
     compose: "Compose",
@@ -173,7 +178,6 @@ export const ru: Dictionary = {
     consolePlaceholder: "Введите команду и нажмите Enter…",
     consoleHint: "Ввод отправляется в консоль процесса. Выделите текст, чтобы скопировать; вставка работает в поле ввода. ↑/↓ — предыдущие команды.",
     consoleReadOnly: "Эта среда выполнения не принимает ввод в консоль.",
-    clipboardHint: "· Ctrl+Shift+C копировать · Ctrl+Shift+V / правая кнопка — вставить",
     shellInside: "Оболочка внутри",
     sessionEnded: "сессия завершена",
     daemonForm: {
