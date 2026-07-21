@@ -53,8 +53,9 @@ jobs:
 
       - name: Stage install scripts
         # Published as release assets so a host can bootstrap with a single
-        # curl, without cloning the repo.
-        run: cp scripts/install-server.sh scripts/install-agent.sh dist/
+        # curl, without cloning the repo. install.sh downloads the other
+        # two at run time, so all three must be attached.
+        run: cp scripts/install.sh scripts/install-server.sh scripts/install-agent.sh dist/
 
       - name: Checksums
         # The installers verify their download against this file, and the

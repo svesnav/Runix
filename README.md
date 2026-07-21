@@ -45,20 +45,44 @@ make release      # static linux amd64 + arm64 binaries into dist/
 
 ## Installing
 
-Both components install with a script that downloads the matching
-`linux/amd64` or `linux/arm64` binary from the GitHub release, installs it
-under `/opt/runix`, and sets up a systemd service. Re-running either
-upgrades the binary in place and keeps the existing configuration.
+One command, and it asks what this host should be:
 
 ```sh
-# Control plane — provisions PostgreSQL in Docker Compose and points at it
-curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install-server.sh \
-    | sudo sh
-
-# Agent, on each managed host (token comes from the UI's "Add server" dialog)
-curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install-agent.sh \
-    | sudo sh -s -- --url https://runix.example.com --token rnx_agt_...
+curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install.sh | sudo sh
 ```
+
+```
+What should this host run?
+  1) Control plane + agent (single-host install)
+  2) Control plane only
+  3) Agent only — join a control plane running elsewhere
+```
+
+Picking **1** gives a working system from nothing: it provisions
+PostgreSQL, starts the control plane, registers this host with it, and
+installs the agent using a token it mints itself — no copy-pasting.
+
+Every answer is also a flag, so the same script runs unattended:
+
+```sh
+# Single-host install, no questions
+curl -fsSL .../install.sh | sudo sh -s -- --role all-in-one --yes
+
+# Agent joining an existing control plane
+curl -fsSL .../install.sh | sudo sh -s -- --role agent \
+    --url https://runix.example.com --token rnx_agt_...
+```
+
+`-y` takes the recommended default for anything not passed. Values with no
+safe default — the role, an agent's URL and token — still fail loudly
+rather than guessing.
+
+`install.sh` is a front end: it collects answers, then hands them to
+`install-server.sh` and `install-agent.sh`, which remain usable directly
+for configuration management. Each downloads the matching `linux/amd64` or
+`linux/arm64` binary from the GitHub release, installs under `/opt/runix`,
+and sets up a systemd service. Re-running any of them upgrades in place
+and keeps the existing configuration.
 
 The install root is a single directory:
 
@@ -183,6 +207,6 @@ internal/server/       HTTP transport assembly (middleware, routing, lifecycle)
 migrations/            embedded PostgreSQL migrations
 web/                   Next.js frontend (TypeScript, Tailwind, TanStack Query)
 web/src/i18n/          UI translations (en, ru) — add a locale by adding a file
-scripts/               install-server.sh, install-agent.sh
+scripts/               install.sh (interactive front end) + the two component installers
 docs/                  architecture and design documents
 ```
