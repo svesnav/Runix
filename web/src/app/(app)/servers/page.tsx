@@ -24,7 +24,6 @@ export default function ServersPage() {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [agentToken, setAgentToken] = useState("");
@@ -41,12 +40,12 @@ export default function ServersPage() {
     mutationFn: () =>
       api<ServerCreated>("/servers", {
         method: "POST",
-        body: { name, address, description, location, agentToken: agentToken.trim() || undefined },
+        body: { name, description, location, agentToken: agentToken.trim() || undefined },
       }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["servers"] });
       setCreateOpen(false);
-      setName(""); setAddress(""); setDescription(""); setLocation(""); setAgentToken(""); setError("");
+      setName(""); setDescription(""); setLocation(""); setAgentToken(""); setError("");
       setCreated(res);
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "failed"),
@@ -109,9 +108,6 @@ export default function ServersPage() {
           <div className="grid grid-cols-2 gap-4">
             <Field label="Name">
               <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="prod-web-01" />
-            </Field>
-            <Field label="Address (IP or domain)">
-              <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="10.0.0.5 / host.example.com" />
             </Field>
           </div>
           <Field label="Description">

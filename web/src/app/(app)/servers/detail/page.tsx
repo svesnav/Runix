@@ -175,9 +175,6 @@ function EditServerDialog({
       <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <Field label={t.common.name}><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
-          <Field label={t.servers.address}>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="10.0.0.5 / host.example.com" />
-          </Field>
         </div>
         <Field label={t.servers.location}><Input value={location} onChange={(e) => setLocation(e.target.value)} /></Field>
         <Field label={t.common.description}><Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
