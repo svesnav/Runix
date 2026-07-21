@@ -1,0 +1,21 @@
+# Development dependencies only; the server/agent run on the host.
+#   docker compose -f docker-compose.dev.yml up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: runix
+      POSTGRES_PASSWORD: runix
+      POSTGRES_DB: runix
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - runix-pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+
+volumes:
+  runix-pgdata:

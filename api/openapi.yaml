@@ -1,0 +1,1101 @@
+openapi: 3.1.0
+info:
+  title: Runix API
+  version: 0.1.0
+  description: |
+    Control-plane API of the Runix infrastructure management platform.
+
+    Authentication: `Authorization: Bearer <token>` where the token is either
+    a JWT access token (from /auth/login or /auth/refresh) or a personal
+    access token (`rnx_pat_...`). WebSocket endpoints accept the JWT via the
+    `access_token` query parameter because browsers cannot set headers on
+    WebSocket upgrades.
+
+    Every error response has the shape
+    `{"error": {"code": "...", "message": "..."}}`.
+servers:
+  - url: /api/v1
+
+tags:
+  - name: auth
+  - name: account
+  - name: users
+  - name: rbac
+  - name: servers
+  - name: runtimes
+  - name: files
+  - name: metrics
+  - name: dashboard
+  - name: settings
+  - name: audit
+  - name: system
+
+paths:
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Log in with username or email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier, password]
+              properties:
+                identifier: { type: string }
+                password: { type: string }
+                remember: { type: boolean }
+      responses:
+        "200":
+          description: Tokens, or an MFA challenge when TOTP is enabled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+
+  /auth/mfa/verify:
+    post:
+      tags: [auth]
+      summary: Complete an MFA challenge with a TOTP or recovery code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mfaToken, code]
+              properties:
+                mfaToken: { type: string }
+                code: { type: string }
+                remember: { type: boolean }
+      responses:
+        "200":
+          description: Tokens
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate a refresh token
+      description: |
+        Refresh tokens are single-use. Presenting an already-rotated token
+        revokes every session of the user (theft response).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: New token pair
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenPair" }
+        "401": { $ref: "#/components/responses/Error" }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Revoke a refresh token's session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "204": { description: Session revoked (idempotent) }
+
+  /me:
+    get:
+      tags: [account]
+      summary: Current user, roles and effective global permissions
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/User" }
+                  permissions: { type: array, items: { type: string } }
+                  roles: { type: array, items: { type: string } }
+
+  /me/password:
+    put:
+      tags: [account]
+      summary: Change own password (requires current password)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string }
+      responses:
+        "204": { description: Changed }
+        "403": { $ref: "#/components/responses/Error" }
+
+  /me/mfa/setup:
+    post:
+      tags: [account]
+      summary: Begin TOTP enrollment (returns secret + otpauth URI)
+      responses:
+        "200":
+          description: Pending secret; confirm with /me/mfa/enable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  secret: { type: string }
+                  uri: { type: string }
+
+  /me/mfa/enable:
+    post:
+      tags: [account]
+      summary: Enable TOTP by proving a working authenticator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        "200":
+          description: Recovery codes, shown exactly once
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recoveryCodes: { type: array, items: { type: string } }
+
+  /me/mfa/disable:
+    post:
+      tags: [account]
+      summary: Disable TOTP (password + code required)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password, code]
+              properties:
+                password: { type: string }
+                code: { type: string }
+      responses:
+        "204": { description: Disabled }
+
+  /me/mfa/recovery-codes:
+    post:
+      tags: [account]
+      summary: Regenerate recovery codes (invalidates previous ones)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        "200":
+          description: New recovery codes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recoveryCodes: { type: array, items: { type: string } }
+
+  /me/sessions:
+    get:
+      tags: [account]
+      summary: List active sessions
+      responses:
+        "200": { description: Sessions }
+
+  /me/sessions/{id}:
+    delete:
+      tags: [account]
+      summary: Revoke one session
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Revoked }
+
+  /me/tokens:
+    get:
+      tags: [account]
+      summary: List personal access tokens
+      responses:
+        "200": { description: Tokens (hashes never returned) }
+    post:
+      tags: [account]
+      summary: Create a personal access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                expiresAt: { type: string, format: date-time }
+      responses:
+        "201": { description: Token; plaintext returned exactly once }
+
+  /me/tokens/{id}:
+    delete:
+      tags: [account]
+      summary: Revoke a personal access token
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Revoked }
+
+  /users:
+    get:
+      tags: [users]
+      summary: List users (users.manage)
+      parameters:
+        - { $ref: "#/components/parameters/page" }
+        - { $ref: "#/components/parameters/size" }
+      responses:
+        "200": { description: Paginated users }
+    post:
+      tags: [users]
+      summary: Create a user (users.manage)
+      responses:
+        "201": { description: Created }
+
+  /users/{id}:
+    get:
+      tags: [users]
+      summary: Get a user (users.manage)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200": { description: User }
+    put:
+      tags: [users]
+      summary: Update email/display name/active flag (users.manage)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200": { description: Updated }
+        "409": { description: Would remove the last active admin }
+    delete:
+      tags: [users]
+      summary: Delete a user (users.manage)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Deleted }
+
+  /users/{id}/password:
+    put:
+      tags: [users]
+      summary: Administrative password reset; forces change at next login
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Reset }
+
+  /users/{id}/roles:
+    get:
+      tags: [rbac]
+      summary: Role keys of a user (users.manage)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200": { description: Role keys }
+    put:
+      tags: [rbac]
+      summary: Replace a user's roles (users.manage)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Replaced }
+
+  /permissions:
+    get:
+      tags: [rbac]
+      summary: Permission catalog (roles.manage)
+      responses:
+        "200": { description: All permission keys }
+
+  /roles:
+    get:
+      tags: [rbac]
+      summary: List roles with their permissions (roles.manage)
+      responses:
+        "200": { description: Roles }
+    post:
+      tags: [rbac]
+      summary: Create a custom role (roles.manage)
+      responses:
+        "201": { description: Created }
+
+  /roles/{id}:
+    put:
+      tags: [rbac]
+      summary: Update a role (roles.manage)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [rbac]
+      summary: Delete a non-system role (roles.manage)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Deleted }
+
+  /groups:
+    get: { tags: [rbac], summary: List user groups (users.manage), responses: { "200": { description: Groups } } }
+    post: { tags: [rbac], summary: Create a user group (users.manage), responses: { "201": { description: Created } } }
+
+  /groups/{id}:
+    delete:
+      tags: [rbac]
+      summary: Delete a user group (users.manage)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Deleted }
+
+  /groups/{id}/members:
+    get:
+      tags: [rbac]
+      summary: List member user ids (users.manage)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200": { description: Member ids }
+    post:
+      tags: [rbac]
+      summary: Add a member (users.manage)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Added }
+
+  /groups/{id}/members/{userId}:
+    delete:
+      tags: [rbac]
+      summary: Remove a member (users.manage)
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Removed }
+
+  /grants:
+    get:
+      tags: [rbac]
+      summary: List scoped permission grants (permissions.manage)
+      responses:
+        "200": { description: Grants }
+    post:
+      tags: [rbac]
+      summary: Grant a permission to a user or group, optionally scoped
+      description: Scope types are global, server_group, server, runtime.
+      responses:
+        "201": { description: Created }
+
+  /grants/{id}:
+    delete:
+      tags: [rbac]
+      summary: Revoke a grant (permissions.manage)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Revoked }
+
+  /servers:
+    get:
+      tags: [servers]
+      summary: List managed servers (server.view)
+      parameters:
+        - { $ref: "#/components/parameters/page" }
+        - { $ref: "#/components/parameters/size" }
+      responses:
+        "200": { description: Paginated servers }
+    post:
+      tags: [servers]
+      summary: Register a server (server.create)
+      description: |
+        The response includes the one-time agent enrollment token. Supply
+        `agentToken` (min 24 chars, no whitespace) to pre-provision a
+        known secret; omit it to have one generated.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                address: { type: string, description: IP or domain (metadata; agents dial out) }
+                description: { type: string }
+                location: { type: string }
+                agentToken: { type: string, description: Optional pre-shared token }
+      responses:
+        "201": { description: Server plus plaintext agentToken }
+
+  /servers/{id}:
+    get:
+      tags: [servers]
+      summary: Get a server (server.view, server-scoped)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200":
+          description: Server
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Server" }
+    put:
+      tags: [servers]
+      summary: Update name/description/location/tags/labels (server.update)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [servers]
+      summary: Delete a server (server.delete)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Deleted }
+
+  /servers/{id}/token/rotate:
+    post:
+      tags: [servers]
+      summary: Rotate the agent token (server.update)
+      description: Body is optional; supply `agentToken` to pin a known secret.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200": { description: New plaintext agentToken }
+
+  /server-groups:
+    get: { tags: [servers], summary: List server groups (server.view), responses: { "200": { description: Groups } } }
+    post: { tags: [servers], summary: Create a server group (server.create), responses: { "201": { description: Created } } }
+
+  /server-groups/{id}:
+    delete:
+      tags: [servers]
+      summary: Delete a server group (server.delete)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Deleted }
+
+  /server-groups/{id}/members:
+    get:
+      tags: [servers]
+      summary: Server ids in the group (server.view)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "200": { description: Server ids }
+    post:
+      tags: [servers]
+      summary: Add a server to the group (server.update)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Added }
+
+  /server-groups/{id}/members/{serverId}:
+    delete:
+      tags: [servers]
+      summary: Remove a server from the group (server.update)
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { name: serverId, in: path, required: true, schema: { type: string } }
+      responses:
+        "204": { description: Removed }
+
+  /servers/{id}/runtimes:
+    get:
+      tags: [runtimes]
+      summary: List runtime instances on a server (server.view)
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { name: type, in: query, schema: { type: string, enum: [docker, compose, systemd, daemon] } }
+      responses:
+        "200":
+          description: Runtime descriptors with per-provider capabilities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  runtimes:
+                    type: array
+                    items: { $ref: "#/components/schemas/RuntimeInfo" }
+        "503": { description: Agent offline }
+
+  /servers/{id}/runtimes/{type}:
+    post:
+      tags: [runtimes]
+      summary: Create a runtime instance (runtime.manage or <type>.manage)
+      description: |
+        `config` is the provider-specific document. docker: image, cmd, env,
+        binds, ports, restartPolicy. daemon: cmd, workingDir, env, autoStart,
+        restartPolicy (never|on-failure|always), maxRestarts,
+        restartDelaySeconds, stopSignal, stopTimeoutSeconds.
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { $ref: "#/components/parameters/rtype" }
+      responses:
+        "201": { description: Created, returns the new instance id }
+        "422": { description: Provider does not support create }
+
+  /servers/{id}/runtimes/{type}/{rid}:
+    get:
+      tags: [runtimes]
+      summary: Get one runtime instance (server.view)
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { $ref: "#/components/parameters/rtype" }
+        - { $ref: "#/components/parameters/rid" }
+      responses:
+        "200":
+          description: Runtime info
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RuntimeInfo" }
+    put:
+      tags: [runtimes]
+      summary: Update a runtime's configuration in place (runtime.manage or <type>.manage)
+      description: |
+        Only providers advertising the `update` capability accept this
+        (daemons today). `config` is the same provider-specific document as
+        create; a running daemon is restarted to apply. Returns 422 when the
+        runtime cannot be reconfigured in place.
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { $ref: "#/components/parameters/rtype" }
+        - { $ref: "#/components/parameters/rid" }
+      responses:
+        "204": { description: Updated }
+        "422": { description: Not supported by this runtime }
+    delete:
+      tags: [runtimes]
+      summary: Remove a runtime instance (runtime.manage or <type>.manage)
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { $ref: "#/components/parameters/rtype" }
+        - { $ref: "#/components/parameters/rid" }
+        - { name: force, in: query, schema: { type: boolean } }
+        - { name: purge, in: query, schema: { type: boolean } }
+      responses:
+        "204": { description: Removed }
+
+  /servers/{id}/runtimes/{type}/{rid}/inspect:
+    get:
+      tags: [runtimes]
+      summary: Provider-native detail document (server.view)
+      description: The equivalent of docker inspect / systemctl show / daemon spec.
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { $ref: "#/components/parameters/rtype" }
+        - { $ref: "#/components/parameters/rid" }
+      responses:
+        "200": { description: Raw provider document }
+        "422": { description: Provider does not support inspect }
+
+  /servers/{id}/runtimes/{type}/{rid}/actions:
+    post:
+      tags: [runtimes]
+      summary: Run a lifecycle action (runtime.manage or <type>.manage)
+      description: |
+        Universal actions: start, stop, restart, pause, resume, kill,
+        reload. Provider-specific extras (systemd): enable, disable, mask,
+        unmask, daemon-reload. Unsupported actions return 422.
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { $ref: "#/components/parameters/rtype" }
+        - { $ref: "#/components/parameters/rid" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string }
+                timeoutSeconds: { type: integer }
+                signal: { type: string }
+      responses:
+        "204": { description: Action applied }
+        "422": { description: Not supported by this runtime }
+
+  /servers/{id}/runtimes/{type}/{rid}/exec:
+    post:
+      tags: [runtimes]
+      summary: Run a one-shot command inside the runtime (runtime.execute)
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { $ref: "#/components/parameters/rtype" }
+        - { $ref: "#/components/parameters/rid" }
+      responses:
+        "200": { description: Exit code with captured (capped) output }
+
+  /servers/{id}/runtimes/{type}/{rid}/logs:
+    get:
+      tags: [runtimes]
+      summary: "WebSocket: stream runtime logs (server.logs)"
+      description: |
+        Upgrades to WebSocket. Query: follow (default true), tail (default
+        200), timestamps. Messages: {"type":"log", timestamp, source, line}
+        then {"type":"end"}.
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { $ref: "#/components/parameters/rtype" }
+        - { $ref: "#/components/parameters/rid" }
+      responses:
+        "101": { description: Switching protocols }
+
+  /servers/{id}/terminal:
+    get:
+      tags: [runtimes]
+      summary: "WebSocket: interactive terminal"
+      description: |
+        target=host (terminal.admin) opens the host shell; target=runtime
+        with type+rid (terminal.open) opens a shell inside a runtime.
+        Client messages: {"type":"input","data":base64} and
+        {"type":"resize","cols","rows"}. Server messages:
+        {"type":"output","data":base64} and {"type":"end"}.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "101": { description: Switching protocols }
+
+  /servers/{id}/files:
+    get:
+      tags: [files]
+      summary: List a directory (server.files.read)
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { name: path, in: query, required: true, schema: { type: string } }
+        - { name: hidden, in: query, schema: { type: boolean } }
+      responses:
+        "200": { description: Entries }
+    delete:
+      tags: [files]
+      summary: Delete a file or directory (server.files.write)
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { name: path, in: query, required: true, schema: { type: string } }
+        - { name: recursive, in: query, schema: { type: boolean } }
+      responses:
+        "204": { description: Deleted }
+
+  /servers/{id}/files/stat:
+    get:
+      tags: [files]
+      summary: Stat a path (server.files.read)
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { name: path, in: query, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Entry }
+
+  /servers/{id}/files/content:
+    get:
+      tags: [files]
+      summary: Read file content, base64, capped at 24 MiB (server.files.read)
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { name: path, in: query, required: true, schema: { type: string } }
+        - { name: maxBytes, in: query, schema: { type: integer } }
+      responses:
+        "200": { description: Content with size and truncation flag }
+    put:
+      tags: [files]
+      summary: Write file content (server.files.write)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Written }
+
+  /servers/{id}/files/mkdir:
+    post:
+      tags: [files]
+      summary: Create a directory tree (server.files.write)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Created }
+
+  /servers/{id}/files/create:
+    post:
+      tags: [files]
+      summary: Create an empty file (server.files.write)
+      description: Fails if the path already exists, so it never truncates.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Created }
+        "400": { description: Already exists or invalid path }
+
+  /servers/{id}/files/copy:
+    post:
+      tags: [files]
+      summary: Copy a file or directory tree (server.files.write)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from, to]
+              properties:
+                from: { type: string }
+                to: { type: string }
+      responses:
+        "204": { description: Copied }
+
+  /servers/{id}/files/chmod:
+    post:
+      tags: [files]
+      summary: Change permissions (server.files.write)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [path, mode]
+              properties:
+                path: { type: string }
+                mode: { type: string, description: "Octal, e.g. 644 or 0755" }
+                recursive: { type: boolean }
+      responses:
+        "204": { description: Applied }
+
+  /servers/{id}/files/archive:
+    post:
+      tags: [files]
+      summary: Compress paths into an archive (server.files.write)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paths, target]
+              properties:
+                paths: { type: array, items: { type: string } }
+                target: { type: string }
+                format: { type: string, enum: [tar.gz, zip] }
+      responses:
+        "204": { description: Archive written }
+
+  /servers/{id}/files/extract:
+    post:
+      tags: [files]
+      summary: Extract an archive (server.files.write)
+      description: |
+        Supports .tar.gz/.tgz/.tar/.zip. Entries that would escape the
+        destination (zip-slip) are rejected, and extraction is size-capped.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [path]
+              properties:
+                path: { type: string }
+                dest: { type: string, description: Defaults to the archive's directory }
+      responses:
+        "204": { description: Extracted }
+
+  /servers/{id}/files/download:
+    get:
+      tags: [files]
+      summary: Download files, streamed (server.files.read)
+      description: |
+        Repeat `path` to download several items; multiple paths (or a
+        directory) are streamed as a single tar.gz built on the fly. The
+        response is streamed end-to-end, so size is unbounded.
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - name: path
+          in: query
+          required: true
+          schema: { type: array, items: { type: string } }
+          explode: true
+        - { name: archive, in: query, schema: { type: boolean } }
+      responses:
+        "200":
+          description: File or archive stream
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+
+  /servers/{id}/files/upload:
+    post:
+      tags: [files]
+      summary: Upload files, streamed (server.files.write)
+      description: |
+        multipart/form-data with one or more file parts (max 64 per
+        request). Each file is streamed to the agent and committed
+        atomically via a temp file, so an interrupted upload never replaces
+        a good file. Returns per-file results; 207 if any failed.
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { name: path, in: query, required: true, schema: { type: string }, description: Target directory }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items: { type: string, format: binary }
+      responses:
+        "200": { description: All files written }
+        "207": { description: Some files failed; see per-file error fields }
+
+  /servers/{id}/files/rename:
+    post:
+      tags: [files]
+      summary: Rename/move (server.files.write)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "204": { description: Renamed }
+
+  /servers/{id}/metrics:
+    get:
+      tags: [metrics]
+      summary: Historical heartbeat metrics (server.metrics)
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: limit, in: query, schema: { type: integer, maximum: 5000 } }
+      responses:
+        "200": { description: Metric points, newest first }
+
+  /servers/{id}/metrics/live:
+    get:
+      tags: [metrics]
+      summary: "WebSocket: live heartbeat feed (server.metrics)"
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses:
+        "101": { description: Switching protocols }
+
+  /dashboard:
+    get:
+      tags: [dashboard]
+      summary: Fleet summary (server.view)
+      responses:
+        "200":
+          description: Server counts, connected agents, runtime states, recent events
+
+  /events:
+    get:
+      tags: [dashboard]
+      summary: "WebSocket: agent presence events (server.view)"
+      responses:
+        "101": { description: Switching protocols }
+
+  /settings:
+    get:
+      tags: [settings]
+      summary: List settings and known keys (settings.view)
+      responses:
+        "200": { description: Settings }
+
+  /settings/{key}:
+    put:
+      tags: [settings]
+      summary: Update a known setting (settings.edit)
+      parameters:
+        - { name: key, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Updated setting }
+        "404": { description: Unknown key }
+
+  /audit:
+    get:
+      tags: [audit]
+      summary: Query the audit log (audit.view)
+      parameters:
+        - { name: actorId, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: targetType, in: query, schema: { type: string } }
+        - { name: targetId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { $ref: "#/components/parameters/page" }
+        - { $ref: "#/components/parameters/size" }
+      responses:
+        "200": { description: Paginated audit entries }
+
+  /version:
+    get:
+      tags: [system]
+      summary: Build information
+      security: []
+      responses:
+        "200": { description: Version info }
+
+  /agents/ws:
+    get:
+      tags: [system]
+      summary: "WebSocket: agent uplink (agent token auth, not for browsers)"
+      security: []
+      responses:
+        "101": { description: Switching protocols }
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    rtype:
+      name: type
+      in: path
+      required: true
+      schema: { type: string, enum: [docker, compose, systemd, daemon] }
+    rid:
+      name: rid
+      in: path
+      required: true
+      schema: { type: string }
+    page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    size:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 25 }
+
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                properties:
+                  code: { type: string }
+                  message: { type: string }
+
+  schemas:
+    TokenPair:
+      type: object
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        expiresIn: { type: integer, description: Access token TTL in seconds }
+
+    LoginResponse:
+      type: object
+      properties:
+        mfaRequired: { type: boolean }
+        mfaToken: { type: string }
+        tokens: { $ref: "#/components/schemas/TokenPair" }
+        user: { $ref: "#/components/schemas/User" }
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        email: { type: string }
+        displayName: { type: string }
+        isActive: { type: boolean }
+        mustChangePassword: { type: boolean }
+        totpEnabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    Server:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        hostname: { type: string }
+        os: { type: string }
+        osVersion: { type: string }
+        kernelVersion: { type: string }
+        architecture: { type: string }
+        agentVersion: { type: string }
+        location: { type: string }
+        tags: { type: array, items: { type: string } }
+        labels: { type: object, additionalProperties: { type: string } }
+        cpuCores: { type: integer }
+        memoryBytes: { type: integer }
+        swapBytes: { type: integer }
+        diskBytes: { type: integer }
+        dockerAvailable: { type: boolean }
+        systemdAvailable: { type: boolean }
+        runtimeTypes: { type: array, items: { type: string } }
+        connectionStatus: { type: string, enum: [never_connected, online, offline] }
+        lastHeartbeatAt: { type: string, format: date-time }
+        lastSeenAt: { type: string, format: date-time }
+
+    RuntimeInfo:
+      type: object
+      properties:
+        descriptor:
+          type: object
+          properties:
+            id: { type: string }
+            type: { type: string }
+            name: { type: string }
+            labels: { type: object, additionalProperties: { type: string } }
+            createdAt: { type: string, format: date-time }
+            status:
+              type: object
+              properties:
+                state:
+                  type: string
+                  enum: [created, starting, running, degraded, paused, stopping, stopped, failed, unknown]
+                health:
+                  type: string
+                  enum: [unknown, starting, healthy, unhealthy]
+                message: { type: string }
+                exitCode: { type: integer }
+                startedAt: { type: string, format: date-time }
+                finishedAt: { type: string, format: date-time }
+                restartCount: { type: integer }
+        capabilities:
+          type: array
+          items: { type: string }
+
+security:
+  - bearer: []

@@ -1,0 +1,1 @@
+ALTER TABLE servers ADD COLUMN address text NOT NULL DEFAULT '';
