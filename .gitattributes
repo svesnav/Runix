@@ -1,0 +1,14 @@
+# Normalise text in the repository, but never hand CRLF to the files that
+# have to run on Linux: a CRLF shebang fails with "bad interpreter:
+# /bin/sh^M", and these scripts ship as release assets.
+* text=auto
+
+*.sh text eol=lf
+Makefile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Go tooling assumes LF everywhere.
+*.go text eol=lf
+go.mod text eol=lf
+go.sum text eol=lf

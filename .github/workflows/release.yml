@@ -1,0 +1,71 @@
+name: Release
+
+# Tagging v* publishes the binaries the install scripts fetch. Asset names
+# are part of that contract: scripts/install-*.sh build their download URL
+# as <binary>_linux_<arch>, so renaming these breaks every installer in the
+# field.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build and publish (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0 # version stamping reads git describe
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+
+      - name: Build binaries
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          set -eu
+          VERSION="${{ github.event.inputs.tag || github.ref_name }}"
+          COMMIT=$(git rev-parse --short HEAD)
+          DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          MODULE=$(go list -m)
+          mkdir -p dist
+          for arch in amd64 arm64; do
+            for bin in runix-server runix-agent; do
+              echo "building ${bin}_linux_${arch}"
+              GOOS=linux GOARCH="$arch" go build -trimpath \
+                -ldflags "-s -w \
+                  -X ${MODULE}/internal/platform/version.version=${VERSION} \
+                  -X ${MODULE}/internal/platform/version.commit=${COMMIT} \
+                  -X ${MODULE}/internal/platform/version.date=${DATE}" \
+                -o "dist/${bin}_linux_${arch}" "./cmd/${bin}"
+            done
+          done
+
+      - name: Stage install scripts
+        # Published as release assets so a host can bootstrap with a single
+        # curl, without cloning the repo.
+        run: cp scripts/install-server.sh scripts/install-agent.sh dist/
+
+      - name: Checksums
+        # The installers verify their download against this file, and the
+        # agent self-update path refuses any download without a matching
+        # checksum. Globbed by name rather than './*' so the file being
+        # written is not itself hashed.
+        run: cd dist && sha256sum runix-* install-* > SHA256SUMS && cat SHA256SUMS
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          generate_release_notes: true
+          files: dist/*

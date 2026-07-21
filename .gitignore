@@ -9,9 +9,10 @@
 coverage.out
 coverage.html
 
-# IDE
+# IDE and local agent tooling
 .idea/
 .vscode/
+.claude/
 
 # Environment
 .env

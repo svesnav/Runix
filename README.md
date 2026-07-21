@@ -45,24 +45,53 @@ make release      # static linux amd64 + arm64 binaries into dist/
 
 ## Installing
 
-Both components install with a script that sets up a systemd service.
-Re-running either upgrades the binary in place and keeps the existing
-configuration.
+Both components install with a script that downloads the matching
+`linux/amd64` or `linux/arm64` binary from the GitHub release, installs it
+under `/opt/runix`, and sets up a systemd service. Re-running either
+upgrades the binary in place and keeps the existing configuration.
 
 ```sh
-# Control plane
-sudo ./scripts/install-server.sh --binary ./dist/linux_amd64/runix-server \
-    --dsn 'postgres://runix:secret@127.0.0.1:5432/runix?sslmode=disable'
+# Control plane — provisions PostgreSQL in Docker Compose and points at it
+curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install-server.sh \
+    | sudo sh
 
 # Agent, on each managed host (token comes from the UI's "Add server" dialog)
-sudo ./scripts/install-agent.sh --url https://runix.example.com --token rnx_agt_...
+curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install-agent.sh \
+    | sudo sh -s -- --url https://runix.example.com --token rnx_agt_...
 ```
 
-Omit `--binary` to download the matching `linux/amd64` or `linux/arm64`
-release instead (`--version`, or `RUNIX_DOWNLOAD_BASE` for a private
-mirror). The server installer generates the JWT and encryption secrets on
-first run and preserves them across upgrades; the agent's credential is
-written to `/etc/runix/agent.env` with mode 0600.
+The install root is a single directory:
+
+```
+/opt/runix/bin/          runix-server, runix-agent
+/opt/runix/etc/          server.env, agent.env (0600 — secrets live here)
+/opt/runix/postgres/     docker-compose.yml, .env, data/   (server only)
+/opt/runix/agent/        supervised daemon state           (agent only)
+```
+
+The server installer provisions PostgreSQL by default: it writes a Compose
+file, generates a password, waits for `pg_isready`, and derives the DSN.
+The container is published on `127.0.0.1` only. Pass `--dsn` to use a
+database you already run, or `--no-postgres` to manage it yourself. Use
+`--pg-port` if 5432 is taken.
+
+Useful flags: `--binary PATH` installs a local build instead of
+downloading; `--version` pins a release; `--repo OWNER/NAME` and
+`--github-token` point at a fork or a private repository; `--prefix`
+changes the install root. Downloads are verified against the release's
+`SHA256SUMS`.
+
+Secrets are generated once and preserved across upgrades — the JWT and
+encryption keys are never rotated by an upgrade, since that would
+invalidate every session and orphan stored TOTP secrets. Hosts installed
+before the `/opt` layout have their config migrated from `/etc/runix`
+automatically, keeping the agent's existing data directory so supervised
+daemons are not orphaned.
+
+Tagging `v*` runs `.github/workflows/release.yml`, which builds all four
+binaries, publishes `SHA256SUMS`, and attaches the install scripts. The
+asset names (`runix-server_linux_amd64`, …) are the installers' contract —
+renaming them breaks every installed host.
 
 ## Quick start (development)
 
