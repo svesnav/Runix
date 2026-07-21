@@ -208,11 +208,6 @@ export function TerminalView({
       icon: <TextSelect size={13} />,
       onSelect: () => { term.current?.selectAll(); term.current?.focus(); },
     },
-    {
-      label: t.runtimes.clear,
-      icon: <Eraser size={13} />,
-      onSelect: () => { term.current?.clear(); term.current?.focus(); },
-    },
   ];
 
   return (
