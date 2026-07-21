@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
+import { RuntimePicker } from "@/components/runtime-picker";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 
 export default function SchedulePage() {
@@ -206,20 +207,12 @@ function TaskDialog({
           </Select>
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Field label={t.schedule.runtimeType}>
-            <Select value={runtimeType} onChange={(e) => setRuntimeType(e.target.value)}>
-              <option value="daemon">daemon</option>
-              <option value="docker">docker</option>
-              <option value="compose">compose</option>
-              <option value="systemd">systemd</option>
-            </Select>
-          </Field>
-          <Field label={t.schedule.runtimeId}>
-            <Input className="font-mono" value={runtimeId} onChange={(e) => setRuntimeId(e.target.value)}
-              placeholder="my-service" />
-          </Field>
-        </div>
+        <RuntimePicker
+          serverId={serverId}
+          value={{ type: runtimeType, id: runtimeId }}
+          onChange={(next) => { setRuntimeType(next.type); setRuntimeId(next.id); }}
+          allowManual
+        />
 
         {kind === "runtime_action" ? (
           <Field label={t.schedule.action}>

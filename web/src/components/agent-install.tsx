@@ -3,6 +3,7 @@
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n";
 
 // controlPlaneURL is where agents dial in: the configured API origin, or the
 // current origin when the UI is served same-origin as the API.
@@ -23,6 +24,7 @@ const INSTALLER_URL =
 // enrolls an agent: the installer, the control-plane URL, and the
 // one-time token.
 export function AgentInstall({ token }: { token: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const command =
     `curl -fsSL ${INSTALLER_URL} | sudo sh -s -- \\\n` +
@@ -39,17 +41,17 @@ export function AgentInstall({ token }: { token: string }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-ink-dim">Run this on the target server:</span>
+        <span className="text-xs text-ink-dim">{t.servers.runOnServer}</span>
         <Button size="sm" variant="outline" onClick={copy}>
           {copied ? <Check size={13} className="text-ok" /> : <Copy size={13} />}
-          {copied ? "Copied" : "Copy command"}
+          {copied ? t.servers.copied : t.servers.copyCommand}
         </Button>
       </div>
       <pre className="overflow-x-auto rounded-md border border-edge bg-canvas p-3 font-mono text-xs leading-5 text-ink">
         {command}
       </pre>
       <p className="text-[11px] text-ink-dim">
-        The agent dials out to the control plane over WebSocket — no inbound ports need opening on the server.
+        {t.servers.dialsOut}
       </p>
     </div>
   );

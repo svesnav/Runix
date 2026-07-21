@@ -174,6 +174,20 @@ export interface Setting {
   updatedAt: string;
 }
 
+// What the control plane says about a setting, so the UI can render the
+// right control instead of asking for hand-written JSON.
+export interface SettingDescriptor {
+  key: string;
+  label: string;
+  description: string;
+  group: string;
+  kind: "string" | "int" | "bool";
+  unit?: string;
+  min?: number;
+  max?: number;
+  default?: unknown;
+}
+
 export interface Session {
   id: string;
   userAgent: string;

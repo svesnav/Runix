@@ -7,17 +7,18 @@ import type { FSEntry } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, Input } from "@/components/ui/input";
+import { useT } from "@/i18n";
 
 const CLASSES = [
-  { key: "owner", label: "Owner" },
-  { key: "group", label: "Group" },
-  { key: "other", label: "Others" },
+  { key: "owner", labelKey: "owner" as const },
+  { key: "group", labelKey: "group" as const },
+  { key: "other", labelKey: "others" as const },
 ] as const;
 
 const BITS = [
-  { key: "read", label: "Read", value: 4 },
-  { key: "write", label: "Write", value: 2 },
-  { key: "exec", label: "Execute", value: 1 },
+  { key: "read", labelKey: "read" as const, value: 4 },
+  { key: "write", labelKey: "write" as const, value: 2 },
+  { key: "exec", labelKey: "execute" as const, value: 1 },
 ] as const;
 
 // modeFromString parses the rwx portion of a Go FileMode string
@@ -45,6 +46,7 @@ export function PermissionsDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const t = useT();
   const [digits, setDigits] = useState<[number, number, number]>(() => digitsFromModeString(entry.mode));
   const [recursive, setRecursive] = useState(false);
   const [error, setError] = useState("");
@@ -76,16 +78,16 @@ export function PermissionsDialog({
         <table className="w-full text-sm">
           <thead>
             <tr className="text-[11px] uppercase tracking-wider text-ink-dim">
-              <th className="pb-1 text-left">Class</th>
+              <th className="pb-1 text-left">{t.files.class}</th>
               {BITS.map((b) => (
-                <th key={b.key} className="pb-1 text-center">{b.label}</th>
+                <th key={b.key} className="pb-1 text-center">{t.files[b.labelKey]}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {CLASSES.map((cls, i) => (
               <tr key={cls.key}>
-                <td className="py-1">{cls.label}</td>
+                <td className="py-1">{t.files[cls.labelKey]}</td>
                 {BITS.map((bit) => (
                   <td key={bit.key} className="py-1 text-center">
                     <input
@@ -125,14 +127,14 @@ export function PermissionsDialog({
               checked={recursive}
               onChange={(e) => setRecursive(e.target.checked)}
             />
-            Apply recursively to all contents
+            {t.files.applyRecursive}
           </label>
         )}
 
         {error && <p className="text-xs text-err">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>Apply</Button>
+          <Button variant="outline" onClick={onClose}>{t.common.cancel}</Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>{t.common.apply}</Button>
         </div>
       </div>
     </Dialog>

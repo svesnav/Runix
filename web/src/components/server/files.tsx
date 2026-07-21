@@ -19,6 +19,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Select } from "@/components/ui/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { PermissionsDialog } from "@/components/server/permissions-dialog";
+import { useT } from "@/i18n";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -45,6 +46,7 @@ export function FilesTab({
   online: boolean;
   initialPath?: string;
 }) {
+  const t = useT();
   const [tabs, setTabs] = useState<Tab[]>([{ id: 1, path: initialPath }]);
   const [activeId, setActiveId] = useState(1);
   const nextId = useRef(2);
@@ -77,7 +79,7 @@ export function FilesTab({
   };
 
   if (!online) {
-    return <p className="py-8 text-center text-sm text-ink-dim">Agent is offline — file access unavailable.</p>;
+    return <p className="py-8 text-center text-sm text-ink-dim">{t.files.agentOffline}</p>;
   }
 
   return (
@@ -100,7 +102,7 @@ export function FilesTab({
               <button
                 onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
                 className="cursor-pointer text-ink-dim opacity-0 hover:text-err group-hover:opacity-100"
-                aria-label="Close tab"
+                aria-label={t.files.closeTab}
               >
                 <X size={11} />
               </button>
@@ -110,7 +112,7 @@ export function FilesTab({
         <button
           onClick={() => addTab(active.path)}
           className="cursor-pointer px-2 py-1.5 text-ink-dim hover:text-ink"
-          title="New tab"
+          title={t.files.newTab}
         >
           <Plus size={13} />
         </button>
@@ -144,6 +146,7 @@ function FileBrowser({
   clipboard: Clipboard | null;
   setClipboard: (c: Clipboard | null) => void;
 }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [hidden, setHidden] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -287,10 +290,10 @@ function FileBrowser({
     const items: MenuItem[] = [];
     if (entry) {
       if (single?.isDir) {
-        items.push({ label: "Open", icon: <Folder size={13} />, onSelect: () => setPath(single.path) });
-        items.push({ label: "Open in new tab", icon: <Plus size={13} />, onSelect: () => openInNewTab(single.path) });
+        items.push({ label: t.common.open, icon: <Folder size={13} />, onSelect: () => setPath(single.path) });
+        items.push({ label: t.files.openInNewTab, icon: <Plus size={13} />, onSelect: () => openInNewTab(single.path) });
       } else if (single) {
-        items.push({ label: "Edit", icon: <Pencil size={13} />, onSelect: () => void openFile(single) });
+        items.push({ label: t.common.edit, icon: <Pencil size={13} />, onSelect: () => void openFile(single) });
       }
       items.push({
         label: `Download${targets.length > 1 ? ` (${targets.length})` : ""}`,
@@ -299,18 +302,18 @@ function FileBrowser({
         separatorBefore: true,
       });
       items.push({
-        label: "Copy", icon: <Copy size={13} />,
+        label: t.files.copy, icon: <Copy size={13} />,
         onSelect: () => setClipboard({ op: "copy", paths: targets.map((t) => t.path) }),
         separatorBefore: true,
       });
       items.push({
-        label: "Cut", icon: <Scissors size={13} />,
+        label: t.files.cut, icon: <Scissors size={13} />,
         onSelect: () => setClipboard({ op: "cut", paths: targets.map((t) => t.path) }),
       });
     }
 
     items.push({
-      label: clipboard ? `Paste (${clipboard.paths.length})` : "Paste",
+      label: clipboard ? `${t.files.paste} (${clipboard.paths.length})` : t.files.paste,
       icon: <ClipboardPaste size={13} />,
       onSelect: doPaste,
       disabled: !clipboard,
@@ -319,11 +322,11 @@ function FileBrowser({
 
     if (entry && single) {
       items.push({
-        label: "Rename", icon: <Pencil size={13} />, separatorBefore: true,
-        onSelect: () => setPrompt({ kind: "rename", title: `Rename ${single.name}`, label: "New name", value: single.name, target: single }),
+        label: t.files.rename, icon: <Pencil size={13} />, separatorBefore: true,
+        onSelect: () => setPrompt({ kind: "rename", title: `${t.files.rename} ${single.name}`, label: t.files.newName, value: single.name, target: single }),
       });
       items.push({
-        label: "Permissions", icon: <Lock size={13} />,
+        label: t.files.permissions, icon: <Lock size={13} />,
         onSelect: () => setPermsFor(single),
       });
     }
@@ -343,7 +346,7 @@ function FileBrowser({
       });
       if (single && isArchive(single.name)) {
         items.push({
-          label: "Extract here", icon: <FileArchive size={13} />,
+          label: t.files.extractHere, icon: <FileArchive size={13} />,
           onSelect: () => void run(
             () => api(`/servers/${serverId}/files/extract`, { method: "POST", body: { path: single.path, dest: path } }),
             "extract",
@@ -352,9 +355,9 @@ function FileBrowser({
       }
     }
 
-    items.push({ label: "New file", icon: <FilePlus size={13} />, separatorBefore: true,
+    items.push({ label: t.files.newFile, icon: <FilePlus size={13} />, separatorBefore: true,
       onSelect: () => setPrompt({ kind: "newFile", title: "New file", label: "File name", value: "" }) });
-    items.push({ label: "New folder", icon: <FolderPlus size={13} />,
+    items.push({ label: t.files.newFolder, icon: <FolderPlus size={13} />,
       onSelect: () => setPrompt({ kind: "newFolder", title: "New folder", label: "Folder name", value: "" }) });
 
     if (targets.length > 0) {
@@ -501,7 +504,7 @@ function FileBrowser({
                     }
                   />
                 </TH>
-                <TH>Name</TH><TH>Size</TH><TH>Mode</TH><TH>Modified</TH>
+                <TH>{t.common.name}</TH><TH>{t.common.size}</TH><TH>{t.files.mode}</TH><TH>{t.files.modified}</TH>
               </TR>
             </THead>
             <TBody>
@@ -613,8 +616,8 @@ function FileBrowser({
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditing(null)}>Close</Button>
-              <Button onClick={() => save.mutate()} disabled={save.isPending}>Save</Button>
+              <Button variant="outline" onClick={() => setEditing(null)}>{t.common.close}</Button>
+              <Button onClick={() => save.mutate()} disabled={save.isPending}>{t.common.save}</Button>
             </div>
           </div>
         )}
@@ -644,6 +647,7 @@ function PromptDialog({
   onClose: () => void;
   onSubmit: (value: string, format?: string) => void;
 }) {
+  const t = useT();
   const [value, setValue] = useState(state.value);
   const [format, setFormat] = useState(state.format ?? "tar.gz");
 
@@ -663,7 +667,7 @@ function PromptDialog({
           <Input autoFocus value={value} onChange={(e) => setValue(e.target.value)} className="font-mono" />
         </Field>
         {state.kind === "archive" && (
-          <Field label="Format">
+          <Field label={t.files.format}>
             <Select value={format} onChange={(e) => changeFormat(e.target.value)}>
               <option value="tar.gz">tar.gz (gzip)</option>
               <option value="zip">zip</option>
@@ -671,8 +675,8 @@ function PromptDialog({
           </Field>
         )}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={!value.trim()}>Confirm</Button>
+          <Button type="button" variant="outline" onClick={onClose}>{t.common.cancel}</Button>
+          <Button type="submit" disabled={!value.trim()}>{t.common.confirm}</Button>
         </div>
       </form>
     </Dialog>

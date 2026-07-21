@@ -14,6 +14,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field, Input } from "@/components/ui/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { TokenReveal } from "@/components/token-reveal";
+import { useT } from "@/i18n";
 
 export default function AccountPage() {
   return (
@@ -24,12 +25,13 @@ export default function AccountPage() {
 }
 
 function AccountContent() {
+  const t = useT();
   const forceChange = useSearchParams().get("forceChange") === "1";
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api<MeResponse>("/me") });
 
   return (
     <div className="max-w-3xl space-y-6">
-      <h1 className="text-lg font-semibold">Account</h1>
+      <h1 className="text-lg font-semibold">{t.account.title}</h1>
       {forceChange && (
         <p className="rounded-md border border-warn/40 bg-warn/10 px-4 py-3 text-sm text-warn">
           Your password must be changed before continuing.
@@ -44,6 +46,7 @@ function AccountContent() {
 }
 
 function PasswordSection() {
+  const t = useT();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -61,7 +64,7 @@ function PasswordSection() {
 
   return (
     <Card>
-      <CardHeader><CardTitle>Password</CardTitle></CardHeader>
+      <CardHeader><CardTitle>{t.account.password}</CardTitle></CardHeader>
       <CardBody>
         <form
           onSubmit={(e) => { e.preventDefault(); change.mutate(); }}
@@ -77,7 +80,7 @@ function PasswordSection() {
             {message
               ? <span className={`text-xs ${message.ok ? "text-ok" : "text-err"}`}>{message.text}</span>
               : <span />}
-            <Button type="submit" disabled={!current || !next || change.isPending}>Change password</Button>
+            <Button type="submit" disabled={!current || !next || change.isPending}>{t.account.changePassword}</Button>
           </div>
         </form>
       </CardBody>
@@ -86,6 +89,7 @@ function PasswordSection() {
 }
 
 function MFASection({ enabled }: { enabled: boolean }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [setup, setSetup] = useState<{ secret: string; uri: string } | null>(null);
   const [code, setCode] = useState("");
@@ -124,7 +128,7 @@ function MFASection({ enabled }: { enabled: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Two-factor authentication</CardTitle>
+        <CardTitle>{t.account.mfaTitle}</CardTitle>
         <span className={`text-xs ${enabled ? "text-ok" : "text-ink-dim"}`}>
           {enabled ? "enabled (TOTP)" : "disabled"}
         </span>
@@ -154,7 +158,7 @@ function MFASection({ enabled }: { enabled: boolean }) {
               >
                 <Input
                   className="max-w-40"
-                  placeholder="6-digit code"
+                  placeholder={t.account.mfaCodePlaceholder}
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                 />
@@ -170,7 +174,7 @@ function MFASection({ enabled }: { enabled: boolean }) {
         {error && <p className="text-xs text-err">{error}</p>}
       </CardBody>
 
-      <Dialog open={recovery !== null} onClose={() => setRecovery(null)} title="Recovery codes">
+      <Dialog open={recovery !== null} onClose={() => setRecovery(null)} title={t.account.recoveryTitle}>
         <p className="mb-3 text-sm text-ink-dim">
           Each code works once if you lose your authenticator. They are shown{" "}
           <b className="text-ink">only now</b> — store them safely.
@@ -180,7 +184,7 @@ function MFASection({ enabled }: { enabled: boolean }) {
         </div>
       </Dialog>
 
-      <Dialog open={disableOpen} onClose={() => setDisableOpen(false)} title="Disable two-factor authentication">
+      <Dialog open={disableOpen} onClose={() => setDisableOpen(false)} title={t.account.mfaDisableTitle}>
         <form onSubmit={(e) => { e.preventDefault(); disable.mutate(); }} className="space-y-4">
           <Field label="Password">
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -190,7 +194,7 @@ function MFASection({ enabled }: { enabled: boolean }) {
           </Field>
           {error && <p className="text-xs text-err">{error}</p>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setDisableOpen(false)}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => setDisableOpen(false)}>{t.common.cancel}</Button>
             <Button type="submit" variant="danger" disabled={!password || !code || disable.isPending}>
               Disable
             </Button>
@@ -202,6 +206,7 @@ function MFASection({ enabled }: { enabled: boolean }) {
 }
 
 function SessionsSection() {
+  const t = useT();
   const queryClient = useQueryClient();
   const currentSession = useAuth((s) => s.refreshToken);
   const { data } = useQuery({
@@ -216,10 +221,10 @@ function SessionsSection() {
 
   return (
     <Card>
-      <CardHeader><CardTitle>Active sessions</CardTitle></CardHeader>
+      <CardHeader><CardTitle>{t.account.sessions}</CardTitle></CardHeader>
       <Table>
         <THead>
-          <TR><TH>Client</TH><TH>IP</TH><TH>Last used</TH><TH>Expires</TH><TH className="text-right" /></TR>
+          <TR><TH>{t.account.client}</TH><TH>IP</TH><TH>{t.account.lastUsed}</TH><TH>{t.account.expires}</TH><TH className="text-right" /></TR>
         </THead>
         <TBody>
           {(data?.sessions ?? []).map((s) => (
@@ -229,7 +234,7 @@ function SessionsSection() {
               <TD className="text-xs text-ink-dim">{timeAgo(s.lastUsedAt)}</TD>
               <TD className="text-xs text-ink-dim">{formatDate(s.expiresAt)}</TD>
               <TD className="text-right">
-                <Button size="sm" variant="ghost" onClick={() => revoke.mutate(s.id)}>Revoke</Button>
+                <Button size="sm" variant="ghost" onClick={() => revoke.mutate(s.id)}>{t.common.revoke}</Button>
               </TD>
             </TR>
           ))}
@@ -245,6 +250,7 @@ function SessionsSection() {
 }
 
 function TokensSection() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
@@ -273,44 +279,45 @@ function TokensSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>API tokens</CardTitle>
-        <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>New token</Button>
+        <CardTitle>{t.account.tokens}</CardTitle>
+        <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>{t.account.newToken}</Button>
       </CardHeader>
       <Table>
         <THead>
-          <TR><TH>Name</TH><TH>Created</TH><TH>Last used</TH><TH className="text-right" /></TR>
+          <TR><TH>{t.common.name}</TH><TH>{t.common.created}</TH><TH>{t.account.lastUsed}</TH><TH className="text-right" /></TR>
         </THead>
         <TBody>
-          {(data?.tokens ?? []).map((t) => (
-            <TR key={t.id}>
-              <TD className="text-sm font-medium">{t.name}</TD>
-              <TD className="text-xs text-ink-dim">{formatDate(t.createdAt)}</TD>
-              <TD className="text-xs text-ink-dim">{t.lastUsedAt ? timeAgo(t.lastUsedAt) : "never"}</TD>
+          {/* `pat`, not `t`: the dictionary is bound to that name here. */}
+          {(data?.tokens ?? []).map((pat) => (
+            <TR key={pat.id}>
+              <TD className="text-sm font-medium">{pat.name}</TD>
+              <TD className="text-xs text-ink-dim">{formatDate(pat.createdAt)}</TD>
+              <TD className="text-xs text-ink-dim">{pat.lastUsedAt ? timeAgo(pat.lastUsedAt) : t.common.never}</TD>
               <TD className="text-right">
-                <Button size="sm" variant="ghost" onClick={() => revoke.mutate(t.id)}>Revoke</Button>
+                <Button size="sm" variant="ghost" onClick={() => revoke.mutate(pat.id)}>{t.common.revoke}</Button>
               </TD>
             </TR>
           ))}
           {data && data.tokens.length === 0 && (
-            <TR><TD colSpan={4} className="py-6 text-center text-ink-dim">No API tokens</TD></TR>
+            <TR><TD colSpan={4} className="py-6 text-center text-ink-dim">{t.account.noTokens}</TD></TR>
           )}
         </TBody>
       </Table>
 
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} title="New API token">
+      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} title={t.account.newToken}>
         <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-4">
           <Field label="Token name">
             <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="ci-deploys" />
           </Field>
           {error && <p className="text-xs text-err">{error}</p>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={!name || create.isPending}>Create</Button>
+            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>{t.common.cancel}</Button>
+            <Button type="submit" disabled={!name || create.isPending}>{t.common.create}</Button>
           </div>
         </form>
       </Dialog>
 
-      <Dialog open={created !== null} onClose={() => setCreated(null)} title="API token created">
+      <Dialog open={created !== null} onClose={() => setCreated(null)} title={t.account.tokenCreated}>
         {created && (
           <div className="space-y-3">
             <p className="text-sm text-ink-dim">

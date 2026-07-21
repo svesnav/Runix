@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { wsUrl, b64ToBytes, textToB64 } from "@/lib/ws";
 import { attachClipboard } from "@/lib/terminal-clipboard";
 import "@xterm/xterm/css/xterm.css";
+import { useT } from "@/i18n";
 
 export function TerminalTab({ serverId, online }: { serverId: string; online: boolean }) {
+  const t = useT();
   const holder = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"connecting" | "open" | "closed">("connecting");
 
@@ -89,7 +91,7 @@ export function TerminalTab({ serverId, online }: { serverId: string; online: bo
   }, [serverId, online]);
 
   if (!online) {
-    return <p className="py-8 text-center text-sm text-ink-dim">Agent is offline — terminal unavailable.</p>;
+    return <p className="py-8 text-center text-sm text-ink-dim">{t.servers.terminalOffline}</p>;
   }
 
   return (
@@ -99,7 +101,7 @@ export function TerminalTab({ serverId, online }: { serverId: string; online: bo
         <span className={status === "open" ? "text-ok" : status === "closed" ? "text-err" : "text-warn"}>
           {status}
         </span>
-        <span className="ml-2">· Ctrl+Shift+C copy · Ctrl+Shift+V / right-click paste</span>
+        <span className="ml-2">{t.runtimes.clipboardHint}</span>
       </div>
       <div ref={holder} className="h-[65vh] overflow-hidden rounded-md border border-edge bg-canvas p-1" />
     </div>

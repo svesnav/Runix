@@ -19,16 +19,19 @@ import { RuntimesTab } from "@/components/server/runtimes";
 import { DockerResourcesTab } from "@/components/server/docker-resources";
 import { FilesTab } from "@/components/server/files";
 import { TerminalTab } from "@/components/server/terminal";
+import { useT } from "@/i18n";
 
 export default function ServerDetailPage() {
+  const t = useT();
   return (
-    <Suspense fallback={<p className="text-sm text-ink-dim">Loading…</p>}>
+    <Suspense fallback={<p className="text-sm text-ink-dim">{t.common.loading}</p>}>
       <ServerDetail />
     </Suspense>
   );
 }
 
 function ServerDetail() {
+  const t = useT();
   const router = useRouter();
   const params = useSearchParams();
   const queryClient = useQueryClient();
@@ -61,7 +64,7 @@ function ServerDetail() {
     },
   });
 
-  if (!server) return <p className="text-sm text-ink-dim">Loading…</p>;
+  if (!server) return <p className="text-sm text-ink-dim">{t.common.loading}</p>;
 
   const online = server.connectionStatus === "online";
 
@@ -81,13 +84,13 @@ function ServerDetail() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            <Pencil size={13} /> Edit
+            <Pencil size={13} /> {t.common.edit}
           </Button>
           <Button variant="outline" size="sm" onClick={() => rotate.mutate()}>
-            <KeyRound size={13} /> Rotate token
+            <KeyRound size={13} /> {t.servers.rotateToken}
           </Button>
           <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)}>
-            <Trash2 size={13} /> Delete
+            <Trash2 size={13} /> {t.common.delete}
           </Button>
         </div>
       </div>
@@ -96,11 +99,11 @@ function ServerDetail() {
         value={tab}
         onChange={setTab}
         items={[
-          { id: "overview", label: "Overview" },
-          { id: "runtimes", label: "Runtimes" },
-          ...(server.dockerAvailable ? [{ id: "docker", label: "Docker" }] : []),
-          { id: "files", label: "Files" },
-          { id: "terminal", label: "Terminal" },
+          { id: "overview", label: t.servers.tabs.overview },
+          { id: "runtimes", label: t.servers.tabs.runtimes },
+          ...(server.dockerAvailable ? [{ id: "docker", label: t.servers.tabs.docker }] : []),
+          { id: "files", label: t.servers.tabs.files },
+          { id: "terminal", label: t.servers.tabs.terminal },
         ]}
       />
 
@@ -112,10 +115,10 @@ function ServerDetail() {
       {tab === "files" && <FilesTab serverId={server.id} online={online} initialPath={filePath} />}
       {tab === "terminal" && <TerminalTab serverId={server.id} online={online} />}
 
-      <Dialog open={rotated !== null} onClose={() => setRotated(null)} title="New agent token">
+      <Dialog open={rotated !== null} onClose={() => setRotated(null)} title={t.servers.newTokenTitle}>
         {rotated && (
           <div className="space-y-3">
-            <p className="text-sm text-ink-dim">The previous token no longer works. Reconfigure the agent:</p>
+            <p className="text-sm text-ink-dim">{t.servers.newTokenIntro}</p>
             <AgentInstall token={rotated} />
           </div>
         )}
@@ -128,15 +131,14 @@ function ServerDetail() {
         }} />
       )}
 
-      <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Delete server">
+      <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} title={t.servers.deleteTitle}>
         <p className="text-sm text-ink-dim">
-          Delete <b className="text-ink">{server.name}</b> and its metrics history? The agent will
-          no longer be able to connect. This cannot be undone.
+          {t.common.delete} <b className="text-ink">{server.name}</b> {t.servers.deleteConfirm}
         </p>
         <div className="mt-4 flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setConfirmDelete(false)}>{t.common.cancel}</Button>
           <Button variant="danger" onClick={() => remove.mutate()} disabled={remove.isPending}>
-            Delete server
+            {t.servers.deleteServer}
           </Button>
         </div>
       </Dialog>
@@ -151,6 +153,7 @@ function EditServerDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const t = useT();
   const [name, setName] = useState(server.name);
   const [address, setAddress] = useState(server.address);
   const [description, setDescription] = useState(server.description);
@@ -168,20 +171,20 @@ function EditServerDialog({
   });
 
   return (
-    <Dialog open onClose={onClose} title="Edit server">
+    <Dialog open onClose={onClose} title={t.servers.editTitle}>
       <form onSubmit={(e) => { e.preventDefault(); save.mutate(); }} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Name"><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
-          <Field label="Address (IP or domain)">
+          <Field label={t.common.name}><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
+          <Field label={t.servers.address}>
             <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="10.0.0.5 / host.example.com" />
           </Field>
         </div>
-        <Field label="Location"><Input value={location} onChange={(e) => setLocation(e.target.value)} /></Field>
-        <Field label="Description"><Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
+        <Field label={t.servers.location}><Input value={location} onChange={(e) => setLocation(e.target.value)} /></Field>
+        <Field label={t.common.description}><Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
         {error && <p className="text-xs text-err">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={!name || save.isPending}>Save</Button>
+          <Button type="button" variant="outline" onClick={onClose}>{t.common.cancel}</Button>
+          <Button type="submit" disabled={!name || save.isPending}>{t.common.save}</Button>
         </div>
       </form>
     </Dialog>

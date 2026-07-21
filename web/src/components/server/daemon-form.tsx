@@ -5,6 +5,7 @@ import { Plus, X } from "lucide-react";
 import type { DaemonConfig } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Label, Select } from "@/components/ui/input";
+import { useT } from "@/i18n";
 
 // EnvPair is one editable environment variable row.
 interface EnvPair {
@@ -115,6 +116,7 @@ export function DaemonForm({
   onChange: (v: DaemonFormValue) => void;
   editing: boolean;
 }) {
+  const t = useT();
   const set = <K extends keyof DaemonFormValue>(key: K, v: DaemonFormValue[K]) =>
     onChange({ ...value, [key]: v });
 
@@ -164,7 +166,7 @@ export function DaemonForm({
       </Field>
 
       <div>
-        <Label>Environment variables</Label>
+        <Label>{t.runtimes.daemonForm.env}</Label>
         <div className="space-y-1.5">
           {value.env.map((pair, i) => (
             <div key={i} className="flex items-center gap-2">
@@ -227,9 +229,9 @@ export function DaemonForm({
       <div className="grid grid-cols-2 gap-4">
         <Field label="Restart policy">
           <Select value={value.restartPolicy} onChange={(e) => set("restartPolicy", e.target.value as DaemonFormValue["restartPolicy"])}>
-            <option value="never">Never</option>
-            <option value="on-failure">On failure (non-zero exit)</option>
-            <option value="always">Always</option>
+            <option value="never">{t.runtimes.daemonForm.policyNever}</option>
+            <option value="on-failure">{t.runtimes.daemonForm.policyOnFailure}</option>
+            <option value="always">{t.runtimes.daemonForm.policyAlways}</option>
           </Select>
         </Field>
         <Field label="Max restarts (0 = unlimited)">

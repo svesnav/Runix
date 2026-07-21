@@ -34,7 +34,13 @@ func (h *Handler) List(c *gin.Context) {
 	if items == nil {
 		items = []Setting{}
 	}
-	c.JSON(http.StatusOK, gin.H{"settings": items, "knownKeys": KnownKeys()})
+	// knownKeys is kept alongside the descriptors so an older client still
+	// renders something usable against a newer control plane.
+	c.JSON(http.StatusOK, gin.H{
+		"settings":  items,
+		"keys":      Descriptors(),
+		"knownKeys": KnownKeys(),
+	})
 }
 
 type setRequest struct {

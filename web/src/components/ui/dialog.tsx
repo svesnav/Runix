@@ -3,6 +3,7 @@
 import { clsx } from "clsx";
 import { X } from "lucide-react";
 import { useEffect } from "react";
+import { useT } from "@/i18n";
 
 export function Dialog({
   open,
@@ -17,6 +18,7 @@ export function Dialog({
   children: React.ReactNode;
   wide?: boolean;
 }) {
+  const t = useT();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -37,7 +39,7 @@ export function Dialog({
       >
         <div className="flex items-center justify-between border-b border-edge px-4 py-3">
           <h2 className="text-sm font-semibold">{title}</h2>
-          <button onClick={onClose} className="cursor-pointer text-ink-dim hover:text-ink" aria-label="Close">
+          <button onClick={onClose} className="cursor-pointer text-ink-dim hover:text-ink" aria-label={t.common.close}>
             <X size={16} />
           </button>
         </div>

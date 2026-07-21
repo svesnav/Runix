@@ -178,7 +178,7 @@ function RuntimeDetail() {
               interactive={caps.includes("console")}
             />
           ) : (
-            <p className="p-4 text-sm text-ink-dim">This runtime does not expose logs.</p>
+            <p className="p-4 text-sm text-ink-dim">{t.runtimes.noLogs}</p>
           )}
         </CardBody>
       </Card>
@@ -266,6 +266,7 @@ function EditComposeDialog({
   inspect: ComposeInspect | undefined;
   onClose: () => void;
 }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [content, setContent] = useState(inspect?.content ?? "");
   const [error, setError] = useState("");
@@ -291,7 +292,7 @@ function EditComposeDialog({
         <ComposeHint dir={inspect?.composeFile} />
         {error && <p className="text-xs text-err">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>{t.common.cancel}</Button>
           <Button onClick={() => save.mutate()} disabled={!content.trim() || save.isPending}>
             {save.isPending ? "Applying…" : "Save & apply"}
           </Button>
@@ -312,6 +313,7 @@ function EditDaemonDialog({
   inspect: DaemonInspect | undefined;
   onClose: () => void;
 }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<DaemonFormValue | null>(
     inspect?.spec ? daemonFormFromConfig(rid, inspect.spec) : null,
@@ -337,15 +339,15 @@ function EditDaemonDialog({
       {form ? (
         <div className="space-y-4">
           <DaemonForm value={form} onChange={setForm} editing />
-          <p className="text-xs text-ink-dim">Saving restarts the daemon if it is running.</p>
+          <p className="text-xs text-ink-dim">{t.runtimes.daemonForm.saveRestarts}</p>
           {error && <p className="text-xs text-err">{error}</p>}
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button onClick={() => save.mutate()} disabled={!form.command.trim() || save.isPending}>Save changes</Button>
+            <Button variant="outline" onClick={onClose}>{t.common.cancel}</Button>
+            <Button onClick={() => save.mutate()} disabled={!form.command.trim() || save.isPending}>{t.runtimes.daemonForm.saveChanges}</Button>
           </div>
         </div>
       ) : (
-        <p className="text-sm text-ink-dim">Loading configuration…</p>
+        <p className="text-sm text-ink-dim">{t.common.loading}</p>
       )}
     </Dialog>
   );

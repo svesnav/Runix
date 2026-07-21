@@ -19,6 +19,8 @@ export const en = {
     kill: "Kill",
     enable: "Enable",
     disable: "Disable",
+    enabled: "Enabled",
+    disabled: "Disabled",
     loading: "Loading…",
     saving: "Saving…",
     search: "Search",
@@ -87,6 +89,7 @@ export const en = {
     addTitle: "Add server",
     editTitle: "Edit server",
     hostname: "Hostname",
+    cpuUsage: "CPU usage",
     osArch: "OS / Arch",
     runtimes: "Runtimes",
     agent: "Agent",
@@ -106,6 +109,8 @@ export const en = {
     copied: "Copied",
     dialsOut: "The agent dials out to the control plane over WebSocket — no inbound ports need opening on the server.",
     deleteTitle: "Delete server",
+    deleteServer: "Delete server",
+    terminalOffline: "Agent is offline — terminal unavailable.",
     deleteConfirm: "and its metrics history? The agent will no longer be able to connect. This cannot be undone.",
     tabs: {
       overview: "Overview",
@@ -140,7 +145,11 @@ export const en = {
     restarts: "Restarts",
     unavailable: "runtime is not available on this server.",
     agentOffline: "Agent is offline — runtime data unavailable.",
+    runtime: "Runtime",
+    pickerChooseServer: "Choose a server first",
+    pickerOffline: "The agent is offline, so its runtimes cannot be listed — enter the identifier by hand.",
     empty: "No runtimes of this type.",
+    countSuffix: "runtimes",
     backTo: "Back to",
     console: "Console",
     logs: "Logs",
@@ -161,6 +170,7 @@ export const en = {
     consolePlaceholder: "Type a command and press Enter…",
     consoleHint: "Input goes to the process's console. Select text to copy; paste works in the input box. ↑/↓ recall previous commands.",
     consoleReadOnly: "This runtime does not accept console input.",
+    clipboardHint: "· Ctrl+Shift+C copy · Ctrl+Shift+V / right-click paste",
     shellInside: "Shell inside",
     sessionEnded: "session ended",
     daemonForm: {
@@ -230,6 +240,9 @@ export const en = {
     pruneNetworksConfirm: "Remove all unused networks?",
     pruned: "Pruned",
     reclaimed: "reclaimed",
+    confirmRemoveImage: "Remove image {name}?",
+    confirmRemoveVolume: "Remove volume {name}? Its data is lost.",
+    confirmRemoveNetwork: "Remove network {name}?",
   },
   files: {
     newFile: "New file",
@@ -252,6 +265,8 @@ export const en = {
     agentOffline: "Agent is offline — file access unavailable.",
     uploading: "uploading",
     newTab: "New tab",
+    closeTab: "Close tab",
+    newName: "New name",
     fileName: "File name",
     folderName: "Folder name",
     archiveName: "Archive name",
@@ -286,6 +301,8 @@ export const en = {
     newPassword: "New password (change forced at next login)",
     rolesFor: "Roles",
     permissionsCount: "permissions",
+    toggleActive: "Enable or disable this user",
+    confirmDelete: "Delete user {name}?",
   },
   roles: {
     title: "Roles",
@@ -295,6 +312,7 @@ export const en = {
     system: "system",
     noPermissions: "no permissions",
     permissions: "Permissions",
+    confirmDelete: "Delete role {name}?",
   },
   grants: {
     title: "Permission grants",
@@ -385,6 +403,39 @@ export const en = {
     value: "Value (JSON)",
     unset: "unset",
     default: "default",
+    usingDefault: "Using the default",
+    changed: "Changed",
+    saveFailed: "Could not save",
+    groups: {
+      general: "General",
+      agents: "Agents",
+      security: "Security",
+    } as Record<string, string>,
+    units: {
+      days: "days",
+      seconds: "seconds",
+    } as Record<string, string>,
+    // Keyed by the setting's stored identifier. A key missing here falls
+    // back to the wording the control plane sent, so a newer server never
+    // renders a blank row in an older UI.
+    keys: {
+      "platform.name": {
+        label: "Platform name",
+        description: "Shown in the browser title and on the sign-in page.",
+      },
+      "metrics.retention_days": {
+        label: "Keep metrics history for",
+        description: "Older samples are deleted. Longer retention costs database space.",
+      },
+      "agents.offline_after_sec": {
+        label: "Mark an agent offline after",
+        description: "How long a host may go without a heartbeat before it is shown as offline.",
+      },
+      "sessions.cleanup_enabled": {
+        label: "Clean up expired sessions",
+        description: "Periodically delete refresh tokens that have already expired.",
+      },
+    } as Record<string, { label: string; description: string }>,
     backupTitle: "Backup & restore",
     backupIntro: "Export servers, groups, roles, grants and settings as a JSON document. Passwords, agent tokens and MFA secrets are never included.",
     exportBackup: "Export backup",

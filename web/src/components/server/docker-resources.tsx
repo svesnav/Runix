@@ -13,24 +13,29 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field, Input } from "@/components/ui/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { Tabs } from "@/components/ui/tabs";
+import { useT } from "@/i18n";
 
+// Labels are resolved inside the component: the dictionary comes from a
+// hook, which module scope cannot call.
 const KINDS = [
-  { id: "images", label: "Images" },
-  { id: "volumes", label: "Volumes" },
-  { id: "networks", label: "Networks" },
+  { id: "images", labelKey: "images" as const },
+  { id: "volumes", labelKey: "volumes" as const },
+  { id: "networks", labelKey: "networks" as const },
 ];
 
 export function DockerResourcesTab({ serverId, online }: { serverId: string; online: boolean }) {
+  const t = useT();
   const [kind, setKind] = useState("images");
+  const tabs = KINDS.map((k) => ({ id: k.id, label: t.docker[k.labelKey] }));
 
   if (!online) {
-    return <p className="py-8 text-center text-sm text-ink-dim">Agent is offline — Docker resources unavailable.</p>;
+    return <p className="py-8 text-center text-sm text-ink-dim">{t.docker.agentOffline}</p>;
   }
 
   return (
     <div className="space-y-4">
       <DiskUsage serverId={serverId} />
-      <Tabs items={KINDS} value={kind} onChange={setKind} />
+      <Tabs items={tabs} value={kind} onChange={setKind} />
       {kind === "images" && <Images serverId={serverId} />}
       {kind === "volumes" && <Volumes serverId={serverId} />}
       {kind === "networks" && <Networks serverId={serverId} />}
@@ -57,6 +62,7 @@ function DiskUsage({ serverId }: { serverId: string }) {
 // useResource centralizes the list/create/remove/prune calls shared by all
 // three resource kinds.
 function useResource<T>(serverId: string, kind: string, listKey: string) {
+  const t = useT();
   const queryClient = useQueryClient();
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["docker", serverId, kind] });
@@ -94,6 +100,7 @@ function useResource<T>(serverId: string, kind: string, listKey: string) {
 }
 
 function Images({ serverId }: { serverId: string }) {
+  const t = useT();
   const { items, error, remove, prune, invalidate } = useResource<DockerImage>(serverId, "images", "images");
   const [pullOpen, setPullOpen] = useState(false);
 
@@ -102,7 +109,7 @@ function Images({ serverId }: { serverId: string }) {
       <Toolbar
         count={items.length}
         label="image"
-        onPrune={() => { if (confirm("Remove all dangling images?")) prune.mutate(); }}
+        onPrune={() => { if (confirm(t.docker.pruneImagesConfirm)) prune.mutate(); }}
         pruning={prune.isPending}
         action={<Button size="sm" onClick={() => setPullOpen(true)}><Download size={13} /> Pull image</Button>}
       />
@@ -110,7 +117,7 @@ function Images({ serverId }: { serverId: string }) {
       <Card>
         <Table>
           <THead>
-            <TR><TH>Tags</TH><TH>Size</TH><TH>In use</TH><TH>Created</TH><TH className="text-right">Actions</TH></TR>
+            <TR><TH>{t.docker.tags}</TH><TH>{t.common.size}</TH><TH>{t.docker.inUse}</TH><TH>{t.common.created}</TH><TH className="text-right">{t.common.actions}</TH></TR>
           </THead>
           <TBody>
             {items.map((img) => (
@@ -123,10 +130,10 @@ function Images({ serverId }: { serverId: string }) {
                 <TD className="text-xs">{img.containers > 0 ? `${img.containers} container(s)` : "—"}</TD>
                 <TD className="text-xs text-ink-dim">{formatDate(new Date(img.created * 1000).toISOString())}</TD>
                 <TD className="text-right">
-                  <Button size="sm" variant="ghost" title="Remove"
+                  <Button size="sm" variant="ghost" title={t.common.remove}
                     onClick={() => {
                       const name = img.repoTags[0] ?? img.id;
-                      if (confirm(`Remove image ${name}?`)) remove.mutate({ id: img.repoTags[0] ?? img.id, force: true });
+                      if (confirm(t.docker.confirmRemoveImage.replace("{name}", name))) remove.mutate({ id: img.repoTags[0] ?? img.id, force: true });
                     }}>
                     <Trash2 size={13} className="text-err" />
                   </Button>
@@ -148,6 +155,7 @@ function Images({ serverId }: { serverId: string }) {
 function PullImageDialog({
   serverId, onClose, onDone,
 }: { serverId: string; onClose: () => void; onDone: () => void }) {
+  const t = useT();
   const [image, setImage] = useState("");
   const [error, setError] = useState("");
 
@@ -158,16 +166,16 @@ function PullImageDialog({
   });
 
   return (
-    <Dialog open onClose={onClose} title="Pull image">
+    <Dialog open onClose={onClose} title={t.docker.pullImage}>
       <form onSubmit={(e) => { e.preventDefault(); pull.mutate(); }} className="space-y-4">
         <Field label="Image reference">
           <Input autoFocus className="font-mono" value={image} onChange={(e) => setImage(e.target.value)}
             placeholder="nginx:alpine" />
         </Field>
-        <p className="text-xs text-ink-dim">Large images can take a while; the request stays open until the pull finishes.</p>
+        <p className="text-xs text-ink-dim">{t.docker.pullHint}</p>
         {error && <p className="text-xs text-err">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={onClose}>{t.common.cancel}</Button>
           <Button type="submit" disabled={!image.trim() || pull.isPending}>
             {pull.isPending ? "Pulling…" : "Pull"}
           </Button>
@@ -178,6 +186,7 @@ function PullImageDialog({
 }
 
 function Volumes({ serverId }: { serverId: string }) {
+  const t = useT();
   const { items, error, remove, prune, invalidate } = useResource<DockerVolume>(serverId, "volumes", "volumes");
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -186,7 +195,7 @@ function Volumes({ serverId }: { serverId: string }) {
       <Toolbar
         count={items.length}
         label="volume"
-        onPrune={() => { if (confirm("Remove all unused volumes? Data in them is lost.")) prune.mutate(); }}
+        onPrune={() => { if (confirm(t.docker.pruneVolumesConfirm)) prune.mutate(); }}
         pruning={prune.isPending}
         action={<Button size="sm" onClick={() => setCreateOpen(true)}><Plus size={13} /> New volume</Button>}
       />
@@ -194,7 +203,7 @@ function Volumes({ serverId }: { serverId: string }) {
       <Card>
         <Table>
           <THead>
-            <TR><TH>Name</TH><TH>Driver</TH><TH>Mountpoint</TH><TH className="text-right">Actions</TH></TR>
+            <TR><TH>{t.common.name}</TH><TH>{t.docker.driver}</TH><TH>{t.docker.mountpoint}</TH><TH className="text-right">{t.common.actions}</TH></TR>
           </THead>
           <TBody>
             {items.map((v) => (
@@ -203,8 +212,8 @@ function Volumes({ serverId }: { serverId: string }) {
                 <TD className="text-xs">{v.driver}</TD>
                 <TD className="max-w-96 truncate font-mono text-xs text-ink-dim" title={v.mountpoint}>{v.mountpoint}</TD>
                 <TD className="text-right">
-                  <Button size="sm" variant="ghost" title="Remove"
-                    onClick={() => { if (confirm(`Remove volume ${v.name}? Its data is lost.`)) remove.mutate({ id: v.name, force: true }); }}>
+                  <Button size="sm" variant="ghost" title={t.common.remove}
+                    onClick={() => { if (confirm(t.docker.confirmRemoveVolume.replace("{name}", v.name))) remove.mutate({ id: v.name, force: true }); }}>
                     <Trash2 size={13} className="text-err" />
                   </Button>
                 </TD>
@@ -217,7 +226,7 @@ function Volumes({ serverId }: { serverId: string }) {
 
       {createOpen && (
         <SimpleCreateDialog
-          title="New volume"
+          title={t.docker.newVolume}
           serverId={serverId}
           kind="volumes"
           onClose={() => setCreateOpen(false)}
@@ -229,6 +238,7 @@ function Volumes({ serverId }: { serverId: string }) {
 }
 
 function Networks({ serverId }: { serverId: string }) {
+  const t = useT();
   const { items, error, remove, prune, invalidate } = useResource<DockerNetwork>(serverId, "networks", "networks");
   const [createOpen, setCreateOpen] = useState(false);
   const builtin = (name: string) => ["bridge", "host", "none"].includes(name);
@@ -238,7 +248,7 @@ function Networks({ serverId }: { serverId: string }) {
       <Toolbar
         count={items.length}
         label="network"
-        onPrune={() => { if (confirm("Remove all unused networks?")) prune.mutate(); }}
+        onPrune={() => { if (confirm(t.docker.pruneNetworksConfirm)) prune.mutate(); }}
         pruning={prune.isPending}
         action={<Button size="sm" onClick={() => setCreateOpen(true)}><Plus size={13} /> New network</Button>}
       />
@@ -246,7 +256,7 @@ function Networks({ serverId }: { serverId: string }) {
       <Card>
         <Table>
           <THead>
-            <TR><TH>Name</TH><TH>Driver</TH><TH>Scope</TH><TH>Containers</TH><TH className="text-right">Actions</TH></TR>
+            <TR><TH>{t.common.name}</TH><TH>{t.docker.driver}</TH><TH>{t.docker.scope}</TH><TH>{t.docker.containers}</TH><TH className="text-right">{t.common.actions}</TH></TR>
           </THead>
           <TBody>
             {items.map((n) => (
@@ -261,7 +271,7 @@ function Networks({ serverId }: { serverId: string }) {
                 <TD className="text-right">
                   <Button size="sm" variant="ghost" title={builtin(n.name) ? "Built-in network" : "Remove"}
                     disabled={builtin(n.name)}
-                    onClick={() => { if (confirm(`Remove network ${n.name}?`)) remove.mutate({ id: n.id }); }}>
+                    onClick={() => { if (confirm(t.docker.confirmRemoveNetwork.replace("{name}", n.name))) remove.mutate({ id: n.id }); }}>
                     <Trash2 size={13} className={builtin(n.name) ? "text-ink-dim" : "text-err"} />
                   </Button>
                 </TD>
@@ -274,7 +284,7 @@ function Networks({ serverId }: { serverId: string }) {
 
       {createOpen && (
         <SimpleCreateDialog
-          title="New network"
+          title={t.docker.newNetwork}
           serverId={serverId}
           kind="networks"
           withInternal
@@ -296,6 +306,7 @@ function SimpleCreateDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const t = useT();
   const [name, setName] = useState("");
   const [driver, setDriver] = useState("");
   const [internal, setInternal] = useState(false);
@@ -328,8 +339,8 @@ function SimpleCreateDialog({
         )}
         {error && <p className="text-xs text-err">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={!name.trim() || create.isPending}>Create</Button>
+          <Button type="button" variant="outline" onClick={onClose}>{t.common.cancel}</Button>
+          <Button type="submit" disabled={!name.trim() || create.isPending}>{t.common.create}</Button>
         </div>
       </form>
     </Dialog>
@@ -345,6 +356,7 @@ function Toolbar({
   pruning: boolean;
   action: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <div className="flex items-center justify-between">
       <span className="text-sm text-ink-dim">{count} {label}{count === 1 ? "" : "s"}</span>

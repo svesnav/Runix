@@ -20,14 +20,15 @@ import {
 } from "@/components/server/daemon-form";
 import { isRunning, useRuntimeActions } from "@/components/server/use-runtime-actions";
 import { ComposeEditor, ComposeHint, SAMPLE_COMPOSE } from "@/components/server/compose-editor";
+import { useT } from "@/i18n";
 
 // Sub-tabs, one per provider type. Availability comes from the server's
 // reported runtimeTypes; a type absent there shows an "unavailable" note.
 const TYPES = [
-  { id: "daemon", label: "Native daemons" },
-  { id: "docker", label: "Docker" },
-  { id: "compose", label: "Compose" },
-  { id: "systemd", label: "Systemd" },
+  { id: "daemon", labelKey: "daemons" as const },
+  { id: "docker", labelKey: "docker" as const },
+  { id: "compose", labelKey: "compose" as const },
+  { id: "systemd", labelKey: "systemd" as const },
 ];
 
 export function RuntimesTab({
@@ -39,20 +40,23 @@ export function RuntimesTab({
   online: boolean;
   availableTypes: string[];
 }) {
+  const t = useT();
   const [type, setType] = useState("daemon");
 
   if (!online) {
-    return <p className="py-8 text-center text-sm text-ink-dim">Agent is offline — runtime data unavailable.</p>;
+    return <p className="py-8 text-center text-sm text-ink-dim">{t.runtimes.agentOffline}</p>;
   }
+
+  const tabs = TYPES.map((ty) => ({ id: ty.id, label: t.runtimes[ty.labelKey] }));
 
   return (
     <div className="space-y-4">
-      <Tabs items={TYPES} value={type} onChange={setType} />
+      <Tabs items={tabs} value={type} onChange={setType} />
       {availableTypes.includes(type) ? (
         <RuntimeTypePanel serverId={serverId} type={type} />
       ) : (
         <p className="py-8 text-center text-sm text-ink-dim">
-          The <span className="font-mono">{type}</span> runtime is not available on this server.
+          <span className="font-mono">{type}</span> — {t.runtimes.unavailable}
         </p>
       )}
     </div>
@@ -60,6 +64,7 @@ export function RuntimesTab({
 }
 
 function RuntimeTypePanel({ serverId, type }: { serverId: string; type: string }) {
+  const t = useT();
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
   const { action } = useRuntimeActions(serverId);
@@ -82,10 +87,15 @@ function RuntimeTypePanel({ serverId, type }: { serverId: string; type: string }
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-ink-dim">{items.length} {type} runtime{items.length === 1 ? "" : "s"}</span>
+        <span className="text-sm text-ink-dim">
+          {items.length} {t.runtimes.countSuffix}
+        </span>
         {creatable && (
           <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus size={13} /> New {type === "daemon" ? "daemon" : type === "compose" ? "project" : "container"}
+            <Plus size={13} />{" "}
+            {type === "daemon" ? t.runtimes.newDaemon
+              : type === "compose" ? t.runtimes.newProject
+                : t.runtimes.newContainer}
           </Button>
         )}
       </div>
@@ -95,7 +105,7 @@ function RuntimeTypePanel({ serverId, type }: { serverId: string; type: string }
       <Card>
         <Table>
           <THead>
-            <TR><TH>Name</TH><TH>State</TH><TH>Detail</TH><TH>Restarts</TH><TH className="text-right">Actions</TH></TR>
+            <TR><TH>{t.common.name}</TH><TH>{t.runtimes.state}</TH><TH>{t.runtimes.detail}</TH><TH>{t.runtimes.restarts}</TH><TH className="text-right">{t.common.actions}</TH></TR>
           </THead>
           <TBody>
             {items.map((rt) => {
@@ -113,31 +123,31 @@ function RuntimeTypePanel({ serverId, type }: { serverId: string; type: string }
                     <div className="flex justify-end gap-1">
                       {running ? (
                         <>
-                          <Button size="sm" variant="ghost" title="Restart"
+                          <Button size="sm" variant="ghost" title={t.common.restart}
                             onClick={() => action.mutate({ type, id: d.id, action: "restart" })}>
                             <RotateCw size={13} />
                           </Button>
-                          <Button size="sm" variant="ghost" title="Stop"
+                          <Button size="sm" variant="ghost" title={t.common.stop}
                             onClick={() => action.mutate({ type, id: d.id, action: "stop" })}>
                             <Square size={13} />
                           </Button>
                         </>
                       ) : (
                         rt.capabilities.includes("start") && (
-                          <Button size="sm" variant="ghost" title="Start"
+                          <Button size="sm" variant="ghost" title={t.common.start}
                             onClick={() => action.mutate({ type, id: d.id, action: "start" })}>
                             <Play size={13} />
                           </Button>
                         )
                       )}
-                      <Button size="sm" variant="outline" onClick={() => open(rt)}>Open</Button>
+                      <Button size="sm" variant="outline" onClick={() => open(rt)}>{t.common.open}</Button>
                     </div>
                   </TD>
                 </TR>
               );
             })}
             {data && items.length === 0 && (
-              <TR><TD colSpan={5} className="py-8 text-center text-ink-dim">No {type} runtimes.</TD></TR>
+              <TR><TD colSpan={5} className="py-8 text-center text-ink-dim">{t.runtimes.empty}</TD></TR>
             )}
           </TBody>
         </Table>
@@ -157,6 +167,7 @@ function RuntimeTypePanel({ serverId, type }: { serverId: string; type: string }
 }
 
 function CreateDaemonDialog({ serverId, onClose }: { serverId: string; onClose: () => void }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<DaemonFormValue>(emptyDaemonForm());
   const [error, setError] = useState("");
@@ -177,13 +188,13 @@ function CreateDaemonDialog({ serverId, onClose }: { serverId: string; onClose: 
   const valid = form.name.trim() && form.command.trim();
 
   return (
-    <Dialog open onClose={onClose} title="New native daemon" wide>
+    <Dialog open onClose={onClose} title={t.runtimes.newDaemon} wide>
       <div className="space-y-4">
         <DaemonForm value={form} onChange={setForm} editing={false} />
         {error && <p className="text-xs text-err">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => create.mutate()} disabled={!valid || create.isPending}>Create daemon</Button>
+          <Button variant="outline" onClick={onClose}>{t.common.cancel}</Button>
+          <Button onClick={() => create.mutate()} disabled={!valid || create.isPending}>{t.runtimes.newDaemon}</Button>
         </div>
       </div>
     </Dialog>
@@ -191,6 +202,7 @@ function CreateDaemonDialog({ serverId, onClose }: { serverId: string; onClose: 
 }
 
 function CreateComposeDialog({ serverId, onClose }: { serverId: string; onClose: () => void }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [dir, setDir] = useState("");
@@ -212,14 +224,14 @@ function CreateComposeDialog({ serverId, onClose }: { serverId: string; onClose:
   });
 
   return (
-    <Dialog open onClose={onClose} title="New Compose project" wide>
+    <Dialog open onClose={onClose} title={t.runtimes.newProject} wide>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Project name">
+          <Field label={t.runtimes.composeForm.projectName}>
             <Input className="font-mono" value={name} onChange={(e) => setName(e.target.value.toLowerCase())}
               placeholder="my-stack" />
           </Field>
-          <Field label="Directory (optional)">
+          <Field label={t.runtimes.composeForm.directory}>
             <Input className="font-mono" value={dir} onChange={(e) => setDir(e.target.value)}
               placeholder="/opt/my-stack" />
           </Field>
@@ -234,7 +246,7 @@ function CreateComposeDialog({ serverId, onClose }: { serverId: string; onClose:
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={() => create.mutate()} disabled={!name.trim() || !content.trim() || create.isPending}>
-            {create.isPending ? "Creating…" : "Create project"}
+            {create.isPending ? t.common.saving : t.runtimes.newProject}
           </Button>
         </div>
       </div>
@@ -243,6 +255,7 @@ function CreateComposeDialog({ serverId, onClose }: { serverId: string; onClose:
 }
 
 function CreateDockerDialog({ serverId, onClose }: { serverId: string; onClose: () => void }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [image, setImage] = useState("");
@@ -268,16 +281,16 @@ function CreateDockerDialog({ serverId, onClose }: { serverId: string; onClose: 
   });
 
   return (
-    <Dialog open onClose={onClose} title="New Docker container">
+    <Dialog open onClose={onClose} title={t.runtimes.newContainer}>
       <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Container name"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="web" /></Field>
+          <Field label={t.runtimes.dockerForm.containerName}><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="web" /></Field>
           <Field label="Image"><Input value={image} onChange={(e) => setImage(e.target.value)} placeholder="nginx:alpine" className="font-mono" /></Field>
         </div>
-        <Field label="Port mappings (comma-separated, host:container)">
+        <Field label={t.runtimes.dockerForm.ports}>
           <Input value={ports} onChange={(e) => setPorts(e.target.value)} placeholder="8080:80, 8443:443" className="font-mono" />
         </Field>
-        <Field label="Environment (one KEY=value per line)">
+        <Field label={t.runtimes.dockerForm.env}>
           <textarea
             className="h-24 w-full rounded-md border border-edge bg-panel px-3 py-2 font-mono text-xs text-ink focus:border-brand/60 focus:outline-none"
             value={envText}

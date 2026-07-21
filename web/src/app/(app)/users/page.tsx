@@ -13,8 +13,10 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field, Input } from "@/components/ui/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { GroupManager } from "@/components/group-manager";
+import { useT } from "@/i18n";
 
 export default function UsersPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [rolesFor, setRolesFor] = useState<User | null>(null);
@@ -47,16 +49,20 @@ export default function UsersPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Users</h1>
+        <h1 className="text-lg font-semibold">{t.users.title}</h1>
         <Button onClick={() => { setError(""); setCreateOpen(true); }}>
-          <Plus size={15} /> Add user
+          <Plus size={15} /> {t.users.add}
         </Button>
       </div>
 
       <Card>
         <Table>
           <THead>
-            <TR><TH>Username</TH><TH>Email</TH><TH>Status</TH><TH>MFA</TH><TH>Created</TH><TH className="text-right">Actions</TH></TR>
+            <TR>
+              <TH>{t.users.username}</TH><TH>{t.users.email}</TH><TH>{t.common.status}</TH>
+              <TH>{t.users.mfa}</TH><TH>{t.common.created}</TH>
+              <TH className="text-right">{t.common.actions}</TH>
+            </TR>
           </THead>
           <TBody>
             {(data?.items ?? []).map((u) => (
@@ -64,9 +70,9 @@ export default function UsersPage() {
                 <TD className="font-medium">{u.displayName ? `${u.displayName} (${u.username})` : u.username}</TD>
                 <TD className="text-xs">{u.email}</TD>
                 <TD>
-                  <button className="cursor-pointer" onClick={() => toggleActive.mutate(u)} title="Toggle active">
+                  <button className="cursor-pointer" onClick={() => toggleActive.mutate(u)} title={t.users.toggleActive}>
                     <Badge className={stateBadge(u.isActive ? "online" : "offline")}>
-                      {u.isActive ? "active" : "disabled"}
+                      {u.isActive ? t.users.active : t.users.disabled}
                     </Badge>
                   </button>
                 </TD>
@@ -78,14 +84,14 @@ export default function UsersPage() {
                 <TD className="text-xs text-ink-dim">{formatDate(u.createdAt)}</TD>
                 <TD>
                   <div className="flex justify-end gap-1">
-                    <Button size="sm" variant="ghost" title="Roles" onClick={() => setRolesFor(u)}>
+                    <Button size="sm" variant="ghost" title={t.users.roles} onClick={() => setRolesFor(u)}>
                       <Shield size={13} />
                     </Button>
-                    <Button size="sm" variant="ghost" title="Reset password" onClick={() => setPasswordFor(u)}>
+                    <Button size="sm" variant="ghost" title={t.users.resetPassword} onClick={() => setPasswordFor(u)}>
                       <KeyRound size={13} />
                     </Button>
-                    <Button size="sm" variant="ghost" title="Delete"
-                      onClick={() => { if (confirm(`Delete user ${u.username}?`)) remove.mutate(u.id); }}>
+                    <Button size="sm" variant="ghost" title={t.common.delete}
+                      onClick={() => { if (confirm(t.users.confirmDelete.replace("{name}", u.username))) remove.mutate(u.id); }}>
                       <Trash2 size={13} className="text-err" />
                     </Button>
                   </div>
@@ -117,6 +123,7 @@ function CreateUserDialog({
   open: boolean; onClose: () => void; onDone: () => void;
   error: string; setError: (s: string) => void;
 }) {
+  const t = useT();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -136,20 +143,20 @@ function CreateUserDialog({
   });
 
   return (
-    <Dialog open={open} onClose={onClose} title="Add user">
+    <Dialog open={open} onClose={onClose} title={t.users.add}>
       <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Username"><Input value={username} onChange={(e) => setUsername(e.target.value)} /></Field>
-          <Field label="Display name"><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></Field>
+          <Field label={t.users.username}><Input value={username} onChange={(e) => setUsername(e.target.value)} /></Field>
+          <Field label={t.users.displayName}><Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></Field>
         </div>
-        <Field label="Email"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
-        <Field label="Initial password (change forced at first login)">
+        <Field label={t.users.email}><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
+        <Field label={t.users.initialPassword}>
           <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         {error && <p className="text-xs text-err">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={!username || !email || !password || create.isPending}>Create</Button>
+          <Button type="button" variant="outline" onClick={onClose}>{t.common.cancel}</Button>
+          <Button type="submit" disabled={!username || !email || !password || create.isPending}>{t.common.create}</Button>
         </div>
       </form>
     </Dialog>
@@ -157,6 +164,7 @@ function CreateUserDialog({
 }
 
 function RolesDialog({ user, onClose }: { user: User; onClose: () => void }) {
+  const t = useT();
   const { data: allRoles } = useQuery({
     queryKey: ["roles"],
     queryFn: () => api<{ roles: Role[] }>("/roles"),
@@ -180,7 +188,7 @@ function RolesDialog({ user, onClose }: { user: User; onClose: () => void }) {
   });
 
   return (
-    <Dialog open onClose={onClose} title={`Roles — ${user.username}`}>
+    <Dialog open onClose={onClose} title={`${t.users.rolesFor} — ${user.username}`}>
       <div className="space-y-2">
         {(allRoles?.roles ?? []).map((role) => (
           <label key={role.id} className="flex cursor-pointer items-center gap-2 rounded-md border border-edge px-3 py-2 text-sm hover:bg-card/60">
@@ -196,20 +204,21 @@ function RolesDialog({ user, onClose }: { user: User; onClose: () => void }) {
               }}
             />
             <span className="font-medium">{role.key}</span>
-            <span className="text-xs text-ink-dim">{role.permissions.length} permissions</span>
+            <span className="text-xs text-ink-dim">{role.permissions.length} {t.users.permissionsCount}</span>
           </label>
         ))}
       </div>
       {error && <p className="mt-3 text-xs text-err">{error}</p>}
       <div className="mt-4 flex justify-end gap-2">
-        <Button variant="outline" onClick={onClose}>Cancel</Button>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>Save</Button>
+        <Button variant="outline" onClick={onClose}>{t.common.cancel}</Button>
+        <Button onClick={() => save.mutate()} disabled={save.isPending}>{t.common.save}</Button>
       </div>
     </Dialog>
   );
 }
 
 function ResetPasswordDialog({ user, onClose }: { user: User; onClose: () => void }) {
+  const t = useT();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const reset = useMutation({
@@ -219,15 +228,15 @@ function ResetPasswordDialog({ user, onClose }: { user: User; onClose: () => voi
     onError: (err) => setError(err instanceof ApiError ? err.message : "reset failed"),
   });
   return (
-    <Dialog open onClose={onClose} title={`Reset password — ${user.username}`}>
+    <Dialog open onClose={onClose} title={`${t.users.resetPassword} — ${user.username}`}>
       <form onSubmit={(e) => { e.preventDefault(); reset.mutate(); }} className="space-y-4">
-        <Field label="New password (change forced at next login)">
+        <Field label={t.users.newPassword}>
           <Input autoFocus type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         {error && <p className="text-xs text-err">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={!password || reset.isPending}>Reset</Button>
+          <Button type="button" variant="outline" onClick={onClose}>{t.common.cancel}</Button>
+          <Button type="submit" disabled={!password || reset.isPending}>{t.users.resetPassword}</Button>
         </div>
       </form>
     </Dialog>

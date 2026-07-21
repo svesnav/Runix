@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { b64ToBytes, textToB64, wsUrl } from "@/lib/ws";
 import { attachClipboard } from "@/lib/terminal-clipboard";
 import "@xterm/xterm/css/xterm.css";
+import { useT } from "@/i18n";
 
 // RuntimeTerminal opens an interactive shell *inside* a runtime (a Docker
 // container today) as opposed to the host shell.
@@ -16,6 +17,7 @@ export function RuntimeTerminal({
   type: string;
   rid: string;
 }) {
+  const t = useT();
   const holder = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"connecting" | "open" | "closed">("connecting");
   const [message, setMessage] = useState("");
@@ -110,7 +112,7 @@ export function RuntimeTerminal({
           {status}
         </span>
         {message && <span className="ml-2 text-err">{message}</span>}
-        <span className="ml-2">· Ctrl+Shift+C copy · Ctrl+Shift+V / right-click paste</span>
+        <span className="ml-2">{t.runtimes.clipboardHint}</span>
       </div>
       <div ref={holder} className="h-[50vh] overflow-hidden rounded-md border border-edge bg-canvas p-1" />
     </div>

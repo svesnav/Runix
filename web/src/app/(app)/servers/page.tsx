@@ -125,18 +125,18 @@ export default function ServersPage() {
               className="font-mono"
               value={agentToken}
               onChange={(e) => setAgentToken(e.target.value)}
-              placeholder="pre-shared token, min 24 characters"
+              placeholder={t.servers.agentTokenPlaceholder}
             />
           </Field>
           {error && <p className="text-xs text-err">{error}</p>}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={!name || create.isPending}>Create</Button>
+            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>{t.common.cancel}</Button>
+            <Button type="submit" disabled={!name || create.isPending}>{t.common.create}</Button>
           </div>
         </form>
       </Dialog>
 
-      <Dialog open={created !== null} onClose={() => setCreated(null)} title="Install the agent">
+      <Dialog open={created !== null} onClose={() => setCreated(null)} title={t.servers.installTitle}>
         {created && (
           <div className="space-y-3">
             <p className="text-sm text-ink-dim">

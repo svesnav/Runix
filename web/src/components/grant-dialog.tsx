@@ -7,6 +7,7 @@ import type {
   Grant, Group, ListResponse, PermissionDescriptor, Role, RuntimeInfo, Server, ServerGroup, User,
 } from "@/lib/types";
 import { useT } from "@/i18n";
+import { RuntimePicker, type RuntimeRef } from "@/components/runtime-picker";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Field, Select } from "@/components/ui/input";
@@ -76,14 +77,10 @@ export function GrantDialog({
     queryFn: () => api<{ permissions: PermissionDescriptor[] }>("/permissions"),
   });
 
-  // Runtimes are only listable once a server is chosen, and only while its
-  // agent is connected.
-  const { data: runtimes, error: runtimesError } = useQuery({
-    queryKey: ["runtimes", serverId, "all"],
-    queryFn: () => api<{ runtimes: RuntimeInfo[] }>(`/servers/${serverId}/runtimes`),
-    enabled: scopeType === "runtime" && serverId !== "",
-    retry: false,
-  });
+  // The picker below loads the server's runtimes itself; this splits the
+  // stored "type/id" reference back out for it.
+  const [runtimeType, ...runtimeIdParts] = runtimeRef.split("/");
+  const runtimeId = runtimeIdParts.join("/");
 
   // Reset the dependent selection whenever the scope changes.
   useEffect(() => {
@@ -211,23 +208,17 @@ export function GrantDialog({
           </Field>
         )}
 
+        {/* No manual fallback here on purpose: authorization matches the
+            runtime id exactly, so a typed-in value would create a grant
+            that silently protects nothing. */}
         {scopeType === "runtime" && serverId && (
-          <Field label={t.grants.runtime}>
-            <Select value={runtimeRef} onChange={(e) => setRuntimeRef(e.target.value)}>
-              <option value="">{t.grants.select}</option>
-              {(runtimes?.runtimes ?? []).map((rt) => (
-                <option
-                  key={`${rt.descriptor.type}/${rt.descriptor.id}`}
-                  value={`${rt.descriptor.type}/${rt.descriptor.id}`}
-                >
-                  {rt.descriptor.type} · {rt.descriptor.name}
-                </option>
-              ))}
-            </Select>
-            {runtimesError && (
-              <p className="mt-1 text-[11px] text-warn">{t.grants.runtimesUnavailable}</p>
-            )}
-          </Field>
+          <RuntimePicker
+            serverId={serverId}
+            label={t.grants.runtime}
+            value={{ type: runtimeType, id: runtimeId }}
+            onChange={(next: RuntimeRef) =>
+              setRuntimeRef(next.type && next.id ? `${next.type}/${next.id}` : "")}
+          />
         )}
 
         {error && <p className="text-xs text-err">{error}</p>}

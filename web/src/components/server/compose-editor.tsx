@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/i18n";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -60,9 +61,10 @@ export function DialogFooter({
   submitLabel: string;
   disabled?: boolean;
 }) {
+  const t = useT();
   return (
     <div className="flex justify-end gap-2">
-      <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+      <Button type="button" variant="outline" onClick={onCancel}>{t.common.cancel}</Button>
       <Button onClick={onSubmit} disabled={disabled}>{submitLabel}</Button>
     </div>
   );

@@ -9,6 +9,7 @@ import { formatBytes, formatDate, formatUptime } from "@/lib/format";
 import type { MetricsPoint, Server } from "@/lib/types";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { EChart } from "@/components/echart";
+import { useT } from "@/i18n";
 
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -32,6 +33,7 @@ const chartBase: EChartsOption = {
 };
 
 export function OverviewTab({ server }: { server: Server }) {
+  const t = useT();
   const [live, setLive] = useState<MetricsPoint[]>([]);
 
   const { data: history } = useQuery({
@@ -118,7 +120,7 @@ export function OverviewTab({ server }: { server: Server }) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>CPU usage</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t.servers.cpuUsage}</CardTitle></CardHeader>
           <CardBody className="p-2"><EChart option={cpuOption} className="h-56 w-full" /></CardBody>
         </Card>
         <Card>

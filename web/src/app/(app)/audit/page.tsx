@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { useT } from "@/i18n";
 
 export default function AuditPage() {
+  const t = useT();
   const [page, setPage] = useState(1);
   const [action, setAction] = useState("");
 
@@ -28,10 +30,10 @@ export default function AuditPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-lg font-semibold">Audit log</h1>
+        <h1 className="text-lg font-semibold">{t.audit.title}</h1>
         <Input
           className="max-w-56"
-          placeholder="Filter by action, e.g. auth.login"
+          placeholder={t.audit.filterPlaceholder}
           value={action}
           onChange={(e) => { setAction(e.target.value); setPage(1); }}
         />
@@ -40,7 +42,10 @@ export default function AuditPage() {
       <Card>
         <Table>
           <THead>
-            <TR><TH>Time</TH><TH>Actor</TH><TH>Action</TH><TH>Target</TH><TH>Result</TH><TH>IP</TH></TR>
+            <TR>
+              <TH>{t.audit.time}</TH><TH>{t.audit.actor}</TH><TH>{t.audit.action}</TH>
+              <TH>{t.audit.target}</TH><TH>{t.audit.result}</TH><TH>{t.audit.ip}</TH>
+            </TR>
           </THead>
           <TBody>
             {(data?.items ?? []).map((entry) => (
@@ -59,7 +64,7 @@ export default function AuditPage() {
               </TR>
             ))}
             {data && data.items.length === 0 && (
-              <TR><TD colSpan={6} className="py-8 text-center text-ink-dim">No entries</TD></TR>
+              <TR><TD colSpan={6} className="py-8 text-center text-ink-dim">{t.audit.empty}</TD></TR>
             )}
           </TBody>
         </Table>
@@ -67,13 +72,13 @@ export default function AuditPage() {
 
       <div className="flex items-center justify-end gap-3 text-sm">
         <span className="text-xs text-ink-dim">
-          Page {data?.page ?? page} of {totalPages} · {data?.total ?? 0} entries
+          {t.common.page} {data?.page ?? page} {t.common.of} {totalPages} · {data?.total ?? 0} {t.common.entries}
         </span>
         <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-          Previous
+          {t.common.previous}
         </Button>
         <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-          Next
+          {t.common.next}
         </Button>
       </div>
     </div>

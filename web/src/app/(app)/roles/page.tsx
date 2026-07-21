@@ -57,9 +57,9 @@ export default function RolesPage() {
               <div className="flex gap-1">
                 {!role.isSystem && (
                   <>
-                    <Button size="sm" variant="ghost" onClick={() => setEditing(role)}>Edit</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditing(role)}>{t.common.edit}</Button>
                     <Button size="sm" variant="ghost"
-                      onClick={() => { if (confirm(`Delete role ${role.key}?`)) remove.mutate(role.id); }}>
+                      onClick={() => { if (confirm(t.roles.confirmDelete.replace("{name}", role.key))) remove.mutate(role.id); }}>
                       <Trash2 size={13} className="text-err" />
                     </Button>
                   </>
@@ -114,6 +114,7 @@ function RoleDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const t = useT();
   const [key, setKey] = useState(role?.key ?? "");
   const [name, setName] = useState(role?.name ?? "");
   const [description, setDescription] = useState(role?.description ?? "");
@@ -181,8 +182,8 @@ function RoleDialog({
         </div>
         {error && <p className="text-xs text-err">{error}</p>}
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={!key || save.isPending}>Save</Button>
+          <Button type="button" variant="outline" onClick={onClose}>{t.common.cancel}</Button>
+          <Button type="submit" disabled={!key || save.isPending}>{t.common.save}</Button>
         </div>
       </form>
     </Dialog>
