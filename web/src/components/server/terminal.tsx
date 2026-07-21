@@ -20,7 +20,6 @@ export function TerminalTab({ serverId, online }: { serverId: string; online: bo
         <span className={status === "open" ? "text-ok" : status === "closed" ? "text-err" : "text-warn"}>
           {status}
         </span>
-        <span className="ml-2">{t.runtimes.clipboardHint}</span>
       </div>
       <TerminalView url={wsUrl(`/servers/${serverId}/terminal`, { target: "host" })} onStatus={setStatus} />
     </div>

@@ -28,7 +28,6 @@ export function RuntimeTerminal({
           {status}
         </span>
         {message && <span className="ml-2 text-err">{message}</span>}
-        <span className="ml-2">{t.runtimes.clipboardHint}</span>
       </div>
       <TerminalView
         url={wsUrl(`/servers/${serverId}/terminal`, { target: "runtime", type, rid })}
