@@ -16,7 +16,7 @@
 #
 # POSIX sh on purpose: minimal images often have no bash.
 #set -eu
-set -eux pipefail
+set -eu
 
 PREFIX=${RUNIX_PREFIX:-/opt/runix}
 REPO=${RUNIX_REPO:-svesnav/Runix}
