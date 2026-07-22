@@ -102,27 +102,27 @@ function tokenizeArgs(input: string): string[] {
 // tokenizer without a token with spaces being split into several.
 function quoteArgs(tokens: string[]): string {
   return tokens
-      .map((t) => {
-        if (t === "" ) return '""';
-        if (!/[\s"']/.test(t)) return t;
-        if (!t.includes('"')) return `"${t}"`;
-        return `'${t}'`;
-      })
-      .join(" ");
+    .map((t) => {
+      if (t === "" ) return '""';
+      if (!/[\s"']/.test(t)) return t;
+      if (!t.includes('"')) return `"${t}"`;
+      return `'${t}'`;
+    })
+    .join(" ");
 }
 
 export function DaemonForm({
-                             value,
-                             onChange,
-                             editing,
-                           }: {
+  value,
+  onChange,
+  editing,
+}: {
   value: DaemonFormValue;
   onChange: (v: DaemonFormValue) => void;
   editing: boolean;
 }) {
   const t = useT();
   const set = <K extends keyof DaemonFormValue>(key: K, v: DaemonFormValue[K]) =>
-      onChange({ ...value, [key]: v });
+    onChange({ ...value, [key]: v });
 
   const [envDraft, setEnvDraft] = useState<EnvPair>({ key: "", value: "" });
 
@@ -133,169 +133,169 @@ export function DaemonForm({
   };
 
   return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Name">
-            <Input
-                value={value.name}
-                onChange={(e) => set("name", e.target.value)}
-                disabled={editing}
-                placeholder="my-service"
-            />
-          </Field>
-          <Field label="Working directory (optional)">
-            <Input
-                value={value.workingDir}
-                onChange={(e) => set("workingDir", e.target.value)}
-                placeholder="/opt/my-service"
-            />
-          </Field>
-        </div>
-
-        <Field label="Command (executable path)">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Name">
           <Input
-              value={value.command}
-              onChange={(e) => set("command", e.target.value)}
-              placeholder="/usr/local/bin/my-service"
-              className="font-mono"
+            value={value.name}
+            onChange={(e) => set("name", e.target.value)}
+            disabled={editing}
+            placeholder="my-service"
           />
         </Field>
-        <Field label="Arguments">
+        <Field label="Working directory (optional)">
           <Input
-              value={value.args}
-              onChange={(e) => set("args", e.target.value)}
-              placeholder="--port 9000 --config /etc/app.yaml"
-              className="font-mono"
+            value={value.workingDir}
+            onChange={(e) => set("workingDir", e.target.value)}
+            placeholder="/opt/my-service"
           />
         </Field>
+      </div>
 
-        <div>
-          <Label>{t.runtimes.daemonForm.env}</Label>
-          <div className="space-y-1.5">
-            {value.env.map((pair, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Input
-                      className="font-mono"
-                      value={pair.key}
-                      onChange={(e) => {
-                        const env = [...value.env];
-                        env[i] = { ...env[i], key: e.target.value };
-                        set("env", env);
-                      }}
-                  />
-                  <span className="text-ink-dim">=</span>
-                  <Input
-                      className="font-mono"
-                      value={pair.value}
-                      onChange={(e) => {
-                        const env = [...value.env];
-                        env[i] = { ...env[i], value: e.target.value };
-                        set("env", env);
-                      }}
-                  />
-                  <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => set("env", value.env.filter((_, j) => j !== i))}
-                  >
-                    <X size={13} />
-                  </Button>
-                </div>
-            ))}
-            <div className="flex items-center gap-2">
+      <Field label="Command (executable path)">
+        <Input
+          value={value.command}
+          onChange={(e) => set("command", e.target.value)}
+          placeholder="/usr/local/bin/my-service"
+          className="font-mono"
+        />
+      </Field>
+      <Field label="Arguments">
+        <Input
+          value={value.args}
+          onChange={(e) => set("args", e.target.value)}
+          placeholder="--port 9000 --config /etc/app.yaml"
+          className="font-mono"
+        />
+      </Field>
+
+      <div>
+        <Label>{t.runtimes.daemonForm.env}</Label>
+        <div className="space-y-1.5">
+          {value.env.map((pair, i) => (
+            <div key={i} className="flex items-center gap-2">
               <Input
-                  className="font-mono"
-                  placeholder="KEY"
-                  value={envDraft.key}
-                  onChange={(e) => setEnvDraft({ ...envDraft, key: e.target.value })}
+                className="font-mono"
+                value={pair.key}
+                onChange={(e) => {
+                  const env = [...value.env];
+                  env[i] = { ...env[i], key: e.target.value };
+                  set("env", env);
+                }}
               />
               <span className="text-ink-dim">=</span>
               <Input
-                  className="font-mono"
-                  placeholder="value"
-                  value={envDraft.value}
-                  onChange={(e) => setEnvDraft({ ...envDraft, value: e.target.value })}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addEnv();
-                    }
-                  }}
+                className="font-mono"
+                value={pair.value}
+                onChange={(e) => {
+                  const env = [...value.env];
+                  env[i] = { ...env[i], value: e.target.value };
+                  set("env", env);
+                }}
               />
-              <Button type="button" variant="outline" size="sm" onClick={addEnv}>
-                <Plus size={13} />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => set("env", value.env.filter((_, j) => j !== i))}
+              >
+                <X size={13} />
               </Button>
             </div>
+          ))}
+          <div className="flex items-center gap-2">
+            <Input
+              className="font-mono"
+              placeholder="KEY"
+              value={envDraft.key}
+              onChange={(e) => setEnvDraft({ ...envDraft, key: e.target.value })}
+            />
+            <span className="text-ink-dim">=</span>
+            <Input
+              className="font-mono"
+              placeholder="value"
+              value={envDraft.value}
+              onChange={(e) => setEnvDraft({ ...envDraft, value: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addEnv();
+                }
+              }}
+            />
+            <Button type="button" variant="outline" size="sm" onClick={addEnv}>
+              <Plus size={13} />
+            </Button>
           </div>
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Field label={t.runtimes.daemonForm.restartPolicy}>
-            <Select value={value.restartPolicy} onChange={(e) => set("restartPolicy", e.target.value as DaemonFormValue["restartPolicy"])}>
-              <option value="never">{t.runtimes.daemonForm.policyNever}</option>
-              <option value="on-failure">{t.runtimes.daemonForm.policyOnFailure}</option>
-              <option value="always">{t.runtimes.daemonForm.policyAlways}</option>
-            </Select>
-          </Field>
-          <Field label={t.runtimes.daemonForm.maxRestarts}>
-            <Input
-                type="number"
-                min={0}
-                value={value.maxRestarts}
-                onChange={(e) => set("maxRestarts", Number(e.target.value))}
-            />
-          </Field>
-          <Field label={t.runtimes.daemonForm.restartDelay}>
-            <Input
-                type="number"
-                min={1}
-                value={value.restartDelaySeconds}
-                onChange={(e) => set("restartDelaySeconds", Number(e.target.value))}
-            />
-          </Field>
-          <Field label={t.runtimes.daemonForm.stopTimeout}>
-            <Input
-                type="number"
-                min={1}
-                value={value.stopTimeoutSeconds}
-                onChange={(e) => set("stopTimeoutSeconds", Number(e.target.value))}
-            />
-          </Field>
-        </div>
-
-        {/* How the daemon is asked to shut down. Console-driven software
-          often only exits cleanly on a word typed at its prompt. */}
-        <div className="grid grid-cols-2 gap-4">
-          <Field label={t.runtimes.daemonForm.stopCommand}>
-            <Input
-                className="font-mono"
-                value={value.stopCommand}
-                onChange={(e) => set("stopCommand", e.target.value)}
-                placeholder={t.runtimes.daemonForm.stopCommandPlaceholder}
-            />
-            <p className="mt-1 text-[11px] text-ink-dim">{t.runtimes.daemonForm.stopCommandHint}</p>
-          </Field>
-          <Field label={t.runtimes.daemonForm.stopSignal}>
-            <Select value={value.stopSignal} onChange={(e) => set("stopSignal", e.target.value)}>
-              <option value="SIGTERM">SIGTERM — {t.runtimes.daemonForm.signalTerm}</option>
-              <option value="SIGINT">SIGINT — {t.runtimes.daemonForm.signalInt}</option>
-              <option value="SIGQUIT">SIGQUIT</option>
-              <option value="SIGHUP">SIGHUP</option>
-            </Select>
-            <p className="mt-1 text-[11px] text-ink-dim">{t.runtimes.daemonForm.stopSignalHint}</p>
-          </Field>
-        </div>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-              type="checkbox"
-              className="accent-brand"
-              checked={value.autoStart}
-              onChange={(e) => set("autoStart", e.target.checked)}
-          />
-          Start automatically (on creation and when the agent boots)
-        </label>
       </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <Field label={t.runtimes.daemonForm.restartPolicy}>
+          <Select value={value.restartPolicy} onChange={(e) => set("restartPolicy", e.target.value as DaemonFormValue["restartPolicy"])}>
+            <option value="never">{t.runtimes.daemonForm.policyNever}</option>
+            <option value="on-failure">{t.runtimes.daemonForm.policyOnFailure}</option>
+            <option value="always">{t.runtimes.daemonForm.policyAlways}</option>
+          </Select>
+        </Field>
+        <Field label={t.runtimes.daemonForm.maxRestarts}>
+          <Input
+            type="number"
+            min={0}
+            value={value.maxRestarts}
+            onChange={(e) => set("maxRestarts", Number(e.target.value))}
+          />
+        </Field>
+        <Field label={t.runtimes.daemonForm.restartDelay}>
+          <Input
+            type="number"
+            min={1}
+            value={value.restartDelaySeconds}
+            onChange={(e) => set("restartDelaySeconds", Number(e.target.value))}
+          />
+        </Field>
+        <Field label={t.runtimes.daemonForm.stopTimeout}>
+          <Input
+            type="number"
+            min={1}
+            value={value.stopTimeoutSeconds}
+            onChange={(e) => set("stopTimeoutSeconds", Number(e.target.value))}
+          />
+        </Field>
+      </div>
+
+      {/* How the daemon is asked to shut down. Console-driven software
+          often only exits cleanly on a word typed at its prompt. */}
+      <div className="grid grid-cols-2 gap-4">
+        <Field label={t.runtimes.daemonForm.stopCommand}>
+          <Input
+            className="font-mono"
+            value={value.stopCommand}
+            onChange={(e) => set("stopCommand", e.target.value)}
+            placeholder={t.runtimes.daemonForm.stopCommandPlaceholder}
+          />
+          <p className="mt-1 text-[11px] text-ink-dim">{t.runtimes.daemonForm.stopCommandHint}</p>
+        </Field>
+        <Field label={t.runtimes.daemonForm.stopSignal}>
+          <Select value={value.stopSignal} onChange={(e) => set("stopSignal", e.target.value)}>
+            <option value="SIGTERM">SIGTERM — {t.runtimes.daemonForm.signalTerm}</option>
+            <option value="SIGINT">SIGINT — {t.runtimes.daemonForm.signalInt}</option>
+            <option value="SIGQUIT">SIGQUIT</option>
+            <option value="SIGHUP">SIGHUP</option>
+          </Select>
+          <p className="mt-1 text-[11px] text-ink-dim">{t.runtimes.daemonForm.stopSignalHint}</p>
+        </Field>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="accent-brand"
+          checked={value.autoStart}
+          onChange={(e) => set("autoStart", e.target.checked)}
+        />
+        Start automatically (on creation and when the agent boots)
+      </label>
+    </div>
   );
 }

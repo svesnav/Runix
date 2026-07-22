@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { clsx } from "clsx";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -15,11 +16,11 @@ export interface MenuItem {
 // ContextMenu renders a floating menu at viewport coordinates, flipping when
 // it would overflow. Closes on outside click, Escape, scroll or resize.
 export function ContextMenu({
-                              x,
-                              y,
-                              items,
-                              onClose,
-                            }: {
+  x,
+  y,
+  items,
+  onClose,
+}: {
   x: number;
   y: number;
   items: MenuItem[];
@@ -31,94 +32,66 @@ export function ContextMenu({
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-
     const rect = el.getBoundingClientRect();
-
     setPos({
-      x:
-          x + rect.width > window.innerWidth
-              ? Math.max(4, window.innerWidth - rect.width - 4)
-              : x,
-      y:
-          y + rect.height > window.innerHeight
-              ? Math.max(4, window.innerHeight - rect.height - 4)
-              : y,
+      x: x + rect.width > window.innerWidth ? Math.max(4, window.innerWidth - rect.width - 4) : x,
+      y: y + rect.height > window.innerHeight ? Math.max(4, window.innerHeight - rect.height - 4) : y,
     });
   }, [x, y]);
 
   useEffect(() => {
-    const onPointerDown = (e: PointerEvent) => {
-      if (ref.current?.contains(e.target as Node)) return;
-      onClose();
-    };
-
-    const onResize = () => {
-      onClose();
-    };
-
-    const onScroll = () => {
-      onClose();
-    };
-
+    const close = () => onClose();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
+      if (e.key === "Escape") onClose();
     };
-
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("resize", onResize);
-    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("click", close);
+    window.addEventListener("contextmenu", close);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
     window.addEventListener("keydown", onKey);
-
     return () => {
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("click", close);
+      window.removeEventListener("contextmenu", close);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
 
   return (
-      <div
-          ref={ref}
-          style={{
-            left: pos.x,
-            top: pos.y,
-          }}
-          onClick={(e) => e.stopPropagation()}
-          className="fixed z-50 min-w-48 rounded-md border border-edge bg-panel py-1 shadow-2xl"
-      >
-        {items.map((item, i) => (
-            <div key={i}>
-              {item.separatorBefore && <div className="my-1 h-px bg-edge" />}
-
-              <button
-                  type="button"
-                  disabled={item.disabled}
-                  onClick={() => {
-                    if (item.disabled) return;
-
-                    onClose();
-                    item.onSelect();
-                  }}
-                  className={clsx(
-                      "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm",
-                      item.disabled
-                          ? "cursor-not-allowed text-ink-dim/40"
-                          : item.danger
-                              ? "cursor-pointer text-err hover:bg-err/10"
-                              : "cursor-pointer text-ink hover:bg-card",
-                  )}
-              >
+    <div
+      ref={ref}
+      style={{ left: pos.x, top: pos.y }}
+      onClick={(e) => e.stopPropagation()}
+      onContextMenu={(e) => e.preventDefault()}
+      className="fixed z-50 min-w-48 rounded-md border border-edge bg-panel py-1 shadow-2xl"
+    >
+      {items.map((item, i) => (
+        <div key={i}>
+          {item.separatorBefore && <div className="my-1 h-px bg-edge" />}
+          <button
+            disabled={item.disabled}
+            onClick={() => {
+              if (item.disabled) return;
+              onClose();
+              item.onSelect();
+            }}
+            className={clsx(
+              "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm",
+              item.disabled
+                ? "cursor-not-allowed text-ink-dim/40"
+                : item.danger
+                  ? "cursor-pointer text-err hover:bg-err/10"
+                  : "cursor-pointer text-ink hover:bg-card",
+            )}
+          >
             <span className="flex w-4 justify-center text-ink-dim">
-              {item.icon}
+              {item.icon && React.cloneElement(item.icon as React.ReactElement, { size: 13 })}
             </span>
-
-                {item.label}
-              </button>
-            </div>
-        ))}
-      </div>
+            {item.label}
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }

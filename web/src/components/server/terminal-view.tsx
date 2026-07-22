@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ClipboardCopy, ClipboardPaste, Eraser, TextSelect } from "lucide-react";
+import { ClipboardCopy, ClipboardPaste, Eraser, TextSelect, ExternalLink } from "lucide-react";
 import type { Terminal } from "@xterm/xterm";
 import { b64ToBytes, textToB64 } from "@/lib/ws";
 import { canReadClipboard, copyText, readText } from "@/lib/clipboard";
@@ -109,9 +109,12 @@ export function TerminalView({
           void copyText(sel);
           return false;
         }
-        // Let the browser dispatch a native paste event. That works over
-        // HTTP too, where navigator.clipboard.readText is unavailable.
-        if (key === "v") return true;
+        if (key === "v") {
+          void readText().then((text) => {
+            if (text) instance.paste(text);
+          });
+          return false;
+        }
         return true;
       });
 
@@ -122,18 +125,10 @@ export function TerminalView({
         }
       });
       observer.observe(holder.current);
-      const onPaste = (e: ClipboardEvent) => {
-        const text = e.clipboardData?.getData("text/plain");
-        if (!text) return;
-        e.preventDefault();
-        instance.paste(text);
-      };
-      holder.current.addEventListener("paste", onPaste, true);
       instance.focus();
 
       cleanup = () => {
         observer.disconnect();
-        holder.current?.removeEventListener("paste", onPaste, true);
         dataSub.dispose();
         instance.dispose();
         term.current = null;
@@ -185,6 +180,21 @@ export function TerminalView({
     }
   }, []);
 
+  const doOpenInBrowser = useCallback(() => {
+    const selection = menu?.selection ?? "";
+    if (!selection) return;
+    
+    // Try to detect and open URLs in the selection
+    const urlRegex = /https?:\/\/[^\s/$.?#].[^\s]*/gi;
+    const urls = selection.match(urlRegex);
+    
+    if (urls && urls.length > 0) {
+      // Open the first URL found in a new tab
+      const url = urls[0];
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }, [menu?.selection]);
+
   const readable = canReadClipboard();
 
   const items: MenuItem[] = [
@@ -200,13 +210,25 @@ export function TerminalView({
       // appearing broken.
       label: readable ? t.runtimes.paste : t.runtimes.pasteWithCtrlV,
       icon: <ClipboardPaste size={13} />,
+      disabled: !readable,
       onSelect: () => void doPaste(),
+    },
+    {
+      label: t.runtimes.openInBrowser,
+      icon: <ExternalLink size={13} />,
+      disabled: !menu?.selection,
+      onSelect: () => void doOpenInBrowser(),
       separatorBefore: true,
     },
     {
       label: t.runtimes.selectAll,
       icon: <TextSelect size={13} />,
       onSelect: () => { term.current?.selectAll(); term.current?.focus(); },
+    },
+    {
+      label: t.runtimes.clear,
+      icon: <Eraser size={13} />,
+      onSelect: () => { term.current?.clear(); term.current?.focus(); },
     },
   ];
 
