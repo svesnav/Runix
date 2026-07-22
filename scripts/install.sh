@@ -687,6 +687,7 @@ provision_postgres() {
         PG_PASSWORD=$(random_secret)
     fi
 
+if [ ! -f "$PG_DIR/.env" ]; then
     umask 077
     cat > "$PG_DIR/.env" <<EOF
 # Written by install.sh. Contains the database password: keep 0600.
@@ -698,6 +699,10 @@ POSTGRES_PORT=$PG_PORT
 POSTGRES_CONTAINER=$PG_CONTAINER
 EOF
     chmod 0600 "$PG_DIR/.env"
+    ok "created $PG_DIR/.env"
+else
+    ok "keeping existing $PG_DIR/.env"
+fi
 
     # Quoted heredoc: ${...} must reach the file, not be expanded here.
     cat > "$PG_DIR/docker-compose.yml" <<'EOF'
@@ -788,22 +793,27 @@ install_server() {
         fi
     fi
 
-    {
-        echo "# Written by install.sh. Contains secrets: keep 0600."
-        echo "RUNIX_ENV=production"
-        echo "RUNIX_HTTP_ADDR=:$HTTP_PORT"
-        echo "RUNIX_DATABASE_DSN=$DSN"
-        echo "RUNIX_JWT_SECRET=$_jwt"
-        echo "RUNIX_ENCRYPTION_KEY=$_enc"
-        echo "RUNIX_ADMIN_PASSWORD=$ADMIN_PASSWORD"
-        echo "RUNIX_LOG_FORMAT=json"
-        if [ -n "$PUBLIC_URL" ]; then
-            echo "RUNIX_CORS_ORIGINS=$PUBLIC_URL"
-        fi
-    } > "$SERVER_ENV"
-    chown "$SERVER_USER" "$SERVER_ENV"
-    chmod 0600 "$SERVER_ENV"
-    ok "wrote $SERVER_ENV"
+    if [ ! -f "$SERVER_ENV" ]; then
+        {
+            echo "# Written by install.sh. Contains secrets: keep 0600."
+            echo "RUNIX_ENV=production"
+            echo "RUNIX_HTTP_ADDR=:$HTTP_PORT"
+            echo "RUNIX_DATABASE_DSN=$DSN"
+            echo "RUNIX_JWT_SECRET=$_jwt"
+            echo "RUNIX_ENCRYPTION_KEY=$_enc"
+            echo "RUNIX_ADMIN_PASSWORD=$ADMIN_PASSWORD"
+            echo "RUNIX_LOG_FORMAT=json"
+            if [ -n "$PUBLIC_URL" ]; then
+                echo "RUNIX_CORS_ORIGINS=$PUBLIC_URL"
+            fi
+        } > "$SERVER_ENV"
+
+        chown "$SERVER_USER" "$SERVER_ENV"
+        chmod 0600 "$SERVER_ENV"
+        ok "created $SERVER_ENV"
+    else
+        ok "keeping existing $SERVER_ENV"
+    fi
 
     if [ "$HAS_SYSTEMD" -eq 1 ]; then
         # With the database in Docker the unit must wait for the daemon,
@@ -859,15 +869,21 @@ install_agent() {
     install_binary runix-agent "$AGENT_BIN"
 
     mkdir -p "$CONFIG_DIR"
-    umask 077
-    cat > "$AGENT_ENV" <<EOF
+    if [ ! -f "$AGENT_ENV" ]; then
+        umask 077
+        cat > "$AGENT_ENV" <<EOF
 # Written by install.sh. Contains the agent credential: keep 0600.
 RUNIX_AGENT_SERVER_URL=$SERVER_URL
 RUNIX_AGENT_TOKEN=$TOKEN
 RUNIX_AGENT_DATA_DIR=$DATA_DIR
 RUNIX_AGENT_LOG_FORMAT=json
 EOF
-    chmod 0600 "$AGENT_ENV"
+
+        chmod 0600 "$AGENT_ENV"
+        ok "created $AGENT_ENV"
+    else
+        ok "keeping existing $AGENT_ENV"
+    fi
     mkdir -p "$DATA_DIR"
     if [ "$AGENT_USER" != root ]; then
         id "$AGENT_USER" >/dev/null 2>&1 || fail "user does not exist: $AGENT_USER"
