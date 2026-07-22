@@ -40,7 +40,9 @@ public IP.
 One command. It asks what the host should be, then does the rest:
 
 ```sh
-curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install.sh | sudo sh
+curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install.sh -o install.sh
+chmod +x install.sh
+./install.sh
 ```
 
 ```
@@ -64,11 +66,14 @@ Every question is also a flag, so the same script works from Ansible or CI:
 
 ```sh
 # Single-host install, no questions asked
-curl -fsSL .../install.sh | sudo sh -s -- --role all-in-one --yes
+curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install.sh -o install.sh
+chmod +x install.sh
+./install.sh --role all-in-one --yes
 
 # Agent joining an existing control plane
-curl -fsSL .../install.sh | sudo sh -s -- --role agent \
-    --url https://runix.example.com --token rnx_agt_...
+curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install.sh -o install.sh
+chmod +x install.sh
+./install.sh --role agent --url https://runix.example.com --token rnx_agt_...
 ```
 
 `-y` takes the recommended default for anything you didn't pass. Values with no
@@ -79,7 +84,9 @@ being guessed.
 ask again:
 
 ```sh
-curl -fsSL .../install.sh | sudo sh -s -- -y
+curl -fsSL https://github.com/svesnav/Runix/releases/latest/download/install.sh -o install.sh
+chmod +x install.sh
+./install.sh -y
 ```
 
 The JWT and encryption secrets, admin password, database password and the

@@ -171,7 +171,7 @@ export const en = {
     consolePlaceholder: "Type a command and press Enter…",
     consoleHint: "Input goes to the process's console. Select text to copy; paste works in the input box. ↑/↓ recall previous commands.",
     consoleReadOnly: "This runtime does not accept console input.",
-    clipboardHint: "· Ctrl+Shift+C copy · Ctrl+V paste · right-click for more",
+    clipboardHint: "· Right-click for context menu",
     copy: "Copy",
     paste: "Paste",
     pasteWithCtrlV: "Paste (press Ctrl+V)",
