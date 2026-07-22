@@ -114,6 +114,7 @@ export const ru: Dictionary = {
     deleteTitle: "Удалить сервер",
     deleteServer: "Удалить сервер",
     terminalOffline: "Агент не в сети — терминал недоступен.",
+    hostShell: "Оболочка хоста",
     deleteConfirm: "и историю его метрик? Агент больше не сможет подключиться. Действие необратимо.",
     tabs: {
       overview: "Обзор",
@@ -136,11 +137,6 @@ export const ru: Dictionary = {
     },
   },
   runtimes: {
-    copy: "Копировать",
-    paste: "Вставить",
-    pasteWithCtrlV: "Вставить (нажмите Ctrl+V)",
-    selectAll: "Выделить всё",
-    copiedToClipboard: "Скопировано в буфер обмена",
     daemons: "Демоны",
     docker: "Docker",
     compose: "Compose",
@@ -178,6 +174,18 @@ export const ru: Dictionary = {
     consolePlaceholder: "Введите команду и нажмите Enter…",
     consoleHint: "Ввод отправляется в консоль процесса. Выделите текст, чтобы скопировать; вставка работает в поле ввода. ↑/↓ — предыдущие команды.",
     consoleReadOnly: "Эта среда выполнения не принимает ввод в консоль.",
+    clipboardHint: "· Правая кнопка — контекстное меню",
+    copy: "Копировать",
+    paste: "Вставить",
+    pasteWithCtrlV: "Вставить (нажмите Ctrl+V)",
+    openInBrowser: "Открыть в браузере",
+    selectAll: "Выделить всё",
+    copiedToClipboard: "Скопировано в буфер обмена",
+    status: {
+      connecting: "подключение",
+      open: "подключено",
+      closed: "закрыто",
+    },
     shellInside: "Оболочка внутри",
     sessionEnded: "сессия завершена",
     daemonForm: {

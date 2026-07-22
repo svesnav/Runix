@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { TerminalStatus, TerminalView } from "@/components/server/terminal-view";
 import { wsUrl } from "@/lib/ws";
+import { TerminalView, TerminalStatus } from "@/components/server/terminal-view";
 import { useT } from "@/i18n";
 
-// RuntimeTerminal opens an interactive shell inside a runtime (a Docker
-// container today), as opposed to the host shell.
+// RuntimeTerminal opens a shell *inside* a runtime (a Docker container
+// today) rather than on the host it runs on.
 export function RuntimeTerminal({
   serverId,
   type,
@@ -25,15 +25,16 @@ export function RuntimeTerminal({
       <div className="text-xs text-ink-dim">
         {t.runtimes.shellInside} <span className="font-mono">{rid}</span> ·{" "}
         <span className={status === "open" ? "text-ok" : status === "closed" ? "text-err" : "text-warn"}>
-          {status}
+          {t.runtimes.status[status]}
         </span>
         {message && <span className="ml-2 text-err">{message}</span>}
+        <span className="ml-2">{t.runtimes.clipboardHint}</span>
       </div>
       <TerminalView
         url={wsUrl(`/servers/${serverId}/terminal`, { target: "runtime", type, rid })}
         className="h-[50vh]"
         onStatus={setStatus}
-        onEnd={(error) => setMessage(error ?? "")}
+        onEnd={(err) => err && setMessage(err)}
       />
     </div>
   );
