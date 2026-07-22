@@ -98,27 +98,27 @@ function tokenizeArgs(input: string): string[] {
 // tokenizer without a token with spaces being split into several.
 function quoteArgs(tokens: string[]): string {
   return tokens
-    .map((t) => {
-      if (t === "" ) return '""';
-      if (!/[\s"']/.test(t)) return t;
-      if (!t.includes('"')) return `"${t}"`;
-      return `'${t}'`;
-    })
-    .join(" ");
+      .map((t) => {
+        if (t === "" ) return '""';
+        if (!/[\s"']/.test(t)) return t;
+        if (!t.includes('"')) return `"${t}"`;
+        return `'${t}'`;
+      })
+      .join(" ");
 }
 
 export function DaemonForm({
-  value,
-  onChange,
-  editing,
-}: {
+                             value,
+                             onChange,
+                             editing,
+                           }: {
   value: DaemonFormValue;
   onChange: (v: DaemonFormValue) => void;
   editing: boolean;
 }) {
   const t = useT();
   const set = <K extends keyof DaemonFormValue>(key: K, v: DaemonFormValue[K]) =>
-    onChange({ ...value, [key]: v });
+      onChange({ ...value, [key]: v });
 
   const [envDraft, setEnvDraft] = useState<EnvPair>({ key: "", value: "" });
 
@@ -129,146 +129,146 @@ export function DaemonForm({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Name">
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Name">
+            <Input
+                value={value.name}
+                onChange={(e) => set("name", e.target.value)}
+                disabled={editing}
+                placeholder="my-service"
+            />
+          </Field>
+          <Field label="Working directory (optional)">
+            <Input
+                value={value.workingDir}
+                onChange={(e) => set("workingDir", e.target.value)}
+                placeholder="/opt/my-service"
+            />
+          </Field>
+        </div>
+
+        <Field label="Command (executable path)">
           <Input
-            value={value.name}
-            onChange={(e) => set("name", e.target.value)}
-            disabled={editing}
-            placeholder="my-service"
+              value={value.command}
+              onChange={(e) => set("command", e.target.value)}
+              placeholder="/usr/local/bin/my-service"
+              className="font-mono"
           />
         </Field>
-        <Field label="Working directory (optional)">
+        <Field label="Arguments">
           <Input
-            value={value.workingDir}
-            onChange={(e) => set("workingDir", e.target.value)}
-            placeholder="/opt/my-service"
+              value={value.args}
+              onChange={(e) => set("args", e.target.value)}
+              placeholder="--port 9000 --config /etc/app.yaml"
+              className="font-mono"
           />
         </Field>
-      </div>
 
-      <Field label="Command (executable path)">
-        <Input
-          value={value.command}
-          onChange={(e) => set("command", e.target.value)}
-          placeholder="/usr/local/bin/my-service"
-          className="font-mono"
-        />
-      </Field>
-      <Field label="Arguments">
-        <Input
-          value={value.args}
-          onChange={(e) => set("args", e.target.value)}
-          placeholder="--port 9000 --config /etc/app.yaml"
-          className="font-mono"
-        />
-      </Field>
-
-      <div>
-        <Label>{t.runtimes.daemonForm.env}</Label>
-        <div className="space-y-1.5">
-          {value.env.map((pair, i) => (
-            <div key={i} className="flex items-center gap-2">
+        <div>
+          <Label>{t.runtimes.daemonForm.env}</Label>
+          <div className="space-y-1.5">
+            {value.env.map((pair, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Input
+                      className="font-mono"
+                      value={pair.key}
+                      onChange={(e) => {
+                        const env = [...value.env];
+                        env[i] = { ...env[i], key: e.target.value };
+                        set("env", env);
+                      }}
+                  />
+                  <span className="text-ink-dim">=</span>
+                  <Input
+                      className="font-mono"
+                      value={pair.value}
+                      onChange={(e) => {
+                        const env = [...value.env];
+                        env[i] = { ...env[i], value: e.target.value };
+                        set("env", env);
+                      }}
+                  />
+                  <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => set("env", value.env.filter((_, j) => j !== i))}
+                  >
+                    <X size={13} />
+                  </Button>
+                </div>
+            ))}
+            <div className="flex items-center gap-2">
               <Input
-                className="font-mono"
-                value={pair.key}
-                onChange={(e) => {
-                  const env = [...value.env];
-                  env[i] = { ...env[i], key: e.target.value };
-                  set("env", env);
-                }}
+                  className="font-mono"
+                  placeholder="KEY"
+                  value={envDraft.key}
+                  onChange={(e) => setEnvDraft({ ...envDraft, key: e.target.value })}
               />
               <span className="text-ink-dim">=</span>
               <Input
-                className="font-mono"
-                value={pair.value}
-                onChange={(e) => {
-                  const env = [...value.env];
-                  env[i] = { ...env[i], value: e.target.value };
-                  set("env", env);
-                }}
+                  className="font-mono"
+                  placeholder="value"
+                  value={envDraft.value}
+                  onChange={(e) => setEnvDraft({ ...envDraft, value: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addEnv();
+                    }
+                  }}
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => set("env", value.env.filter((_, j) => j !== i))}
-              >
-                <X size={13} />
+              <Button type="button" variant="outline" size="sm" onClick={addEnv}>
+                <Plus size={13} />
               </Button>
             </div>
-          ))}
-          <div className="flex items-center gap-2">
-            <Input
-              className="font-mono"
-              placeholder="KEY"
-              value={envDraft.key}
-              onChange={(e) => setEnvDraft({ ...envDraft, key: e.target.value })}
-            />
-            <span className="text-ink-dim">=</span>
-            <Input
-              className="font-mono"
-              placeholder="value"
-              value={envDraft.value}
-              onChange={(e) => setEnvDraft({ ...envDraft, value: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addEnv();
-                }
-              }}
-            />
-            <Button type="button" variant="outline" size="sm" onClick={addEnv}>
-              <Plus size={13} />
-            </Button>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Restart policy">
-          <Select value={value.restartPolicy} onChange={(e) => set("restartPolicy", e.target.value as DaemonFormValue["restartPolicy"])}>
-            <option value="never">{t.runtimes.daemonForm.policyNever}</option>
-            <option value="on-failure">{t.runtimes.daemonForm.policyOnFailure}</option>
-            <option value="always">{t.runtimes.daemonForm.policyAlways}</option>
-          </Select>
-        </Field>
-        <Field label="Max restarts (0 = unlimited)">
-          <Input
-            type="number"
-            min={0}
-            value={value.maxRestarts}
-            onChange={(e) => set("maxRestarts", Number(e.target.value))}
-          />
-        </Field>
-        <Field label="Restart delay (seconds)">
-          <Input
-            type="number"
-            min={1}
-            value={value.restartDelaySeconds}
-            onChange={(e) => set("restartDelaySeconds", Number(e.target.value))}
-          />
-        </Field>
-        <Field label="Stop timeout (seconds)">
-          <Input
-            type="number"
-            min={1}
-            value={value.stopTimeoutSeconds}
-            onChange={(e) => set("stopTimeoutSeconds", Number(e.target.value))}
-          />
-        </Field>
-      </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Restart policy">
+            <Select value={value.restartPolicy} onChange={(e) => set("restartPolicy", e.target.value as DaemonFormValue["restartPolicy"])}>
+              <option value="never">{t.runtimes.daemonForm.policyNever}</option>
+              <option value="on-failure">{t.runtimes.daemonForm.policyOnFailure}</option>
+              <option value="always">{t.runtimes.daemonForm.policyAlways}</option>
+            </Select>
+          </Field>
+          <Field label="Max restarts (0 = unlimited)">
+            <Input
+                type="number"
+                min={0}
+                value={value.maxRestarts}
+                onChange={(e) => set("maxRestarts", Number(e.target.value))}
+            />
+          </Field>
+          <Field label="Restart delay (seconds)">
+            <Input
+                type="number"
+                min={1}
+                value={value.restartDelaySeconds}
+                onChange={(e) => set("restartDelaySeconds", Number(e.target.value))}
+            />
+          </Field>
+          <Field label="Stop timeout (seconds)">
+            <Input
+                type="number"
+                min={1}
+                value={value.stopTimeoutSeconds}
+                onChange={(e) => set("stopTimeoutSeconds", Number(e.target.value))}
+            />
+          </Field>
+        </div>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          className="accent-brand"
-          checked={value.autoStart}
-          onChange={(e) => set("autoStart", e.target.checked)}
-        />
-        Start automatically (on creation and when the agent boots)
-      </label>
-    </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+              type="checkbox"
+              className="accent-brand"
+              checked={value.autoStart}
+              onChange={(e) => set("autoStart", e.target.checked)}
+          />
+          Start automatically (on creation and when the agent boots)
+        </label>
+      </div>
   );
 }

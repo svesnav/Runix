@@ -71,8 +71,8 @@ export interface ServerCreated {
 }
 
 export type RuntimeState =
-  | "created" | "starting" | "running" | "degraded" | "paused"
-  | "stopping" | "stopped" | "failed" | "unknown";
+    | "created" | "starting" | "running" | "degraded" | "paused"
+    | "stopping" | "stopped" | "failed" | "unknown";
 
 export interface RuntimeStatus {
   state: RuntimeState;
