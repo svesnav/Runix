@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ClipboardCopy, ClipboardPaste, Eraser, TextSelect, ExternalLink } from "lucide-react";
 import type { Terminal } from "@xterm/xterm";

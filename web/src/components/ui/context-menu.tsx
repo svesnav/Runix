@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { clsx } from "clsx";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -86,7 +85,6 @@ export function ContextMenu({
             )}
           >
             <span className="flex w-4 justify-center text-ink-dim">
-              {item.icon && React.cloneElement(item.icon as React.ReactElement, { size: 13 })}
             </span>
             {item.label}
           </button>
