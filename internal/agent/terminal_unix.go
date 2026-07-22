@@ -12,11 +12,18 @@ import (
 	rt "github.com/runix/runix/internal/domain/runtime"
 )
 
-// openHostTerminal starts the login shell on a PTY.
+// openHostTerminal starts the operator's login shell on a PTY.
 func openHostTerminal(cols, rows uint16) (rt.Terminal, error) {
 	shell := resolveShell()
 	cmd := exec.Command(shell, shellArgs(shell)...)
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
+	// HOME and SHELL are set explicitly: under systemd the agent inherits
+	// neither reliably, and without them bash skips ~/.bashrc and reports
+	// the wrong $SHELL to anything that asks.
+	env := append(os.Environ(), "TERM=xterm-256color", "SHELL="+shell)
+	if os.Getenv("HOME") == "" {
+		env = append(env, "HOME=/root")
+	}
+	cmd.Env = env
 
 	f, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: cols, Rows: rows})
 	if err != nil {

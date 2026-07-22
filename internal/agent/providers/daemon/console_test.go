@@ -24,7 +24,14 @@ func TestMain(m *testing.M) {
 	if os.Getenv(echoLoopEnv) == "1" {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			fmt.Println("got:" + scanner.Text())
+			line := scanner.Text()
+			// "quit" stands in for a game server's "stop": the only way
+			// this process ever exits cleanly is by being asked to.
+			if line == "quit" {
+				fmt.Println("shutting down")
+				os.Exit(0)
+			}
+			fmt.Println("got:" + line)
 		}
 		os.Exit(0)
 	}

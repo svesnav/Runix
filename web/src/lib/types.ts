@@ -71,8 +71,8 @@ export interface ServerCreated {
 }
 
 export type RuntimeState =
-    | "created" | "starting" | "running" | "degraded" | "paused"
-    | "stopping" | "stopped" | "failed" | "unknown";
+  | "created" | "starting" | "running" | "degraded" | "paused"
+  | "stopping" | "stopped" | "failed" | "unknown";
 
 export interface RuntimeStatus {
   state: RuntimeState;
@@ -110,6 +110,8 @@ export interface DaemonConfig {
   restartDelaySeconds: number;
   maxRestartDelaySeconds?: number;
   stopSignal?: string;
+  // Written to the process's console before any signal is sent.
+  stopCommand?: string;
   stopTimeoutSeconds?: number;
 }
 

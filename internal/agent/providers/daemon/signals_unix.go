@@ -24,6 +24,17 @@ var signalNames = map[string]syscall.Signal{
 	"SIGTERM": syscall.SIGTERM,
 }
 
+// validStopSignal reports whether a spec's stop signal can actually be
+// delivered on this platform. normalize() fills the default, so an empty
+// name only reaches here on a spec that skipped it.
+func validStopSignal(name string) bool {
+	if name == "" {
+		return true
+	}
+	_, ok := signalNames[name]
+	return ok
+}
+
 func signalProcess(cmd *exec.Cmd, name string) error {
 	sig, ok := signalNames[name]
 	if !ok {

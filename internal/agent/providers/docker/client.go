@@ -310,7 +310,18 @@ type CreateConfig struct {
 	// Tty allocates a pseudo-terminal. Console-driven servers usually want
 	// this off so output stays line-oriented.
 	Tty bool `json:"tty,omitempty"`
+	// StopSignal is what Docker sends on `stop` before resorting to
+	// SIGKILL. SIGINT here is the equivalent of pressing Ctrl+C.
+	StopSignal string `json:"stopSignal,omitempty"`
+	// StopCommand is written to the container's console before any signal.
+	// Stored as a label so it survives restarts and can be read back at
+	// stop time without Runix keeping its own state about the container.
+	StopCommand string `json:"stopCommand,omitempty"`
 }
+
+// StopCommandLabel names the container label holding CreateConfig's
+// StopCommand.
+const StopCommandLabel = "runix.stop.command"
 
 func (c *Client) CreateContainer(ctx context.Context, name string, cfg CreateConfig) (string, error) {
 	portBindings := map[string][]map[string]string{}
@@ -328,11 +339,19 @@ func (c *Client) CreateContainer(ctx context.Context, name string, cfg CreateCon
 		portBindings[containerPort] = append(portBindings[containerPort],
 			map[string]string{"HostPort": parts[0]})
 	}
+	labels := map[string]string{}
+	for k, v := range cfg.Labels {
+		labels[k] = v
+	}
+	if cfg.StopCommand != "" {
+		labels[StopCommandLabel] = cfg.StopCommand
+	}
+
 	body := map[string]any{
 		"Image":  cfg.Image,
 		"Cmd":    cfg.Cmd,
 		"Env":    cfg.Env,
-		"Labels": cfg.Labels,
+		"Labels": labels,
 		// Keep stdin open so the container's console can be attached later.
 		// Without this the process gets no input stream and the console is
 		// permanently unavailable — a decision that cannot be undone
@@ -340,6 +359,7 @@ func (c *Client) CreateContainer(ctx context.Context, name string, cfg CreateCon
 		"OpenStdin":    true,
 		"StdinOnce":    false,
 		"Tty":          cfg.Tty,
+		"StopSignal":   cfg.StopSignal,
 		"ExposedPorts": exposed,
 		"HostConfig": map[string]any{
 			"Binds":        cfg.Binds,

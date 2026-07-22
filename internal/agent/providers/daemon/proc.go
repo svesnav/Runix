@@ -97,9 +97,12 @@ func (p *proc) replaceSpec(spec Spec) bool {
 func (p *proc) writeStdin(data []byte) error {
 	p.mu.Lock()
 	stdin := p.stdin
-	running := p.state == rt.StateRunning
+	// Any live state, not just Running: a graceful stop moves the process
+	// to Stopping and *then* writes its stop command, so demanding Running
+	// here would reject the very write the shutdown depends on.
+	alive := p.state.IsActive()
 	p.mu.Unlock()
-	if stdin == nil || !running {
+	if stdin == nil || !alive {
 		return fmt.Errorf("%w: daemon is not running", rt.ErrInvalidTransition)
 	}
 	if _, err := stdin.Write(data); err != nil {
@@ -364,6 +367,23 @@ func (p *proc) stop(graceful bool, timeout time.Duration) error {
 		if graceful {
 			if timeout <= 0 {
 				timeout = spec.stopTimeout()
+			}
+			// A configured stop command gets the first and longest chance:
+			// it is the only shutdown the program itself considers clean.
+			// The signal below remains the fallback, so a process that
+			// ignores the command is still stopped rather than left running.
+			if spec.StopCommand != "" && p.writeStdin([]byte(spec.StopCommand+"\n")) == nil {
+				p.buf.append(rt.LogSourceSystem, []byte("sent stop command: "+spec.StopCommand))
+				select {
+				case <-loopDone:
+					p.mu.Lock()
+					p.state = rt.StateStopped
+					p.mu.Unlock()
+					return nil
+				case <-time.After(timeout):
+					p.buf.append(rt.LogSourceSystem,
+						[]byte("stop command did not finish in time, signalling"))
+				}
 			}
 			_ = signalProcess(cmd, spec.StopSignal)
 			select {

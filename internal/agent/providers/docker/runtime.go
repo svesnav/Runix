@@ -52,8 +52,57 @@ func (c *containerRuntime) Start(ctx context.Context) error {
 	return wrap(c.provider.client.StartContainer(ctx, string(c.id)))
 }
 
+// Stop asks the container to shut itself down the way its software expects
+// before falling back to Docker's own stop (the configured stop signal,
+// then SIGKILL after the timeout).
 func (c *containerRuntime) Stop(ctx context.Context, opts rt.StopOptions) error {
+	if cmd := c.stopCommand(ctx); cmd != "" {
+		if c.sendStopCommand(ctx, cmd, opts.Timeout) {
+			return nil
+		}
+	}
 	return wrap(c.provider.client.StopContainer(ctx, string(c.id), opts.Timeout))
+}
+
+// stopCommand reads the command recorded on the container at create time.
+func (c *containerRuntime) stopCommand(ctx context.Context) string {
+	detail, err := c.provider.client.InspectContainer(ctx, string(c.id))
+	if err != nil {
+		return ""
+	}
+	return detail.Config.Labels[StopCommandLabel]
+}
+
+// sendStopCommand writes the command to the container's console and waits
+// for it to exit. Reports whether the container actually stopped, so the
+// caller can fall back rather than leave it running.
+func (c *containerRuntime) sendStopCommand(ctx context.Context, cmd string, timeout time.Duration) bool {
+	console, err := c.Console(ctx)
+	if err != nil {
+		return false
+	}
+	defer console.Close()
+
+	if _, err := console.Write([]byte(cmd + "\n")); err != nil {
+		return false
+	}
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		status, err := c.Status(ctx)
+		if err == nil && !status.State.IsActive() {
+			return true
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
+	return false
 }
 
 func (c *containerRuntime) Restart(ctx context.Context, opts rt.StopOptions) error {

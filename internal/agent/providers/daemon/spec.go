@@ -7,6 +7,7 @@ package daemon
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	rt "github.com/runix/runix/internal/domain/runtime"
@@ -33,7 +34,12 @@ type Spec struct {
 	RestartDelaySecs   int               `json:"restartDelaySeconds"`
 	MaxRestartDelaySec int               `json:"maxRestartDelaySeconds"`
 	StopSignal         string            `json:"stopSignal,omitempty"`
-	StopTimeoutSecs    int               `json:"stopTimeoutSeconds"`
+	// StopCommand is written to the process's console before any signal is
+	// sent. Console-driven software (game servers, REPL daemons) shuts down
+	// cleanly on a word like "stop" and may lose state if signalled while
+	// mid-save. Empty means signal straight away.
+	StopCommand     string `json:"stopCommand,omitempty"`
+	StopTimeoutSecs int    `json:"stopTimeoutSeconds"`
 }
 
 func (s *Spec) normalize() {
@@ -68,6 +74,17 @@ func (s *Spec) Validate() error {
 	}
 	if s.RestartDelaySecs > 3600 || s.MaxRestartDelaySec > 3600 {
 		return fmt.Errorf("%w: restart delays must be at most 1h", rt.ErrInvalidSpec)
+	}
+	// Caught here rather than at stop time: a typo that only surfaces when
+	// someone tries to shut the daemon down is a bad time to find out.
+	if !validStopSignal(s.StopSignal) {
+		return fmt.Errorf("%w: unknown stop signal %q", rt.ErrInvalidSpec, s.StopSignal)
+	}
+	if strings.ContainsAny(s.StopCommand, "\r\n") {
+		return fmt.Errorf("%w: stop command must be a single line", rt.ErrInvalidSpec)
+	}
+	if len(s.StopCommand) > 512 {
+		return fmt.Errorf("%w: stop command is too long", rt.ErrInvalidSpec)
 	}
 	return nil
 }

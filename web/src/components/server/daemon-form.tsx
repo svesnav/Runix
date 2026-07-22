@@ -23,6 +23,7 @@ export interface DaemonFormValue {
   restartPolicy: "never" | "on-failure" | "always";
   maxRestarts: number;
   restartDelaySeconds: number;
+  stopCommand: string;
   stopSignal: string;
   stopTimeoutSeconds: number;
 }
@@ -38,6 +39,7 @@ export function emptyDaemonForm(): DaemonFormValue {
     restartPolicy: "on-failure",
     maxRestarts: 0,
     restartDelaySeconds: 2,
+    stopCommand: "",
     stopSignal: "SIGTERM",
     stopTimeoutSeconds: 10,
   };
@@ -57,6 +59,7 @@ export function daemonFormFromConfig(name: string, config: DaemonConfig): Daemon
     restartPolicy: config.restartPolicy ?? "on-failure",
     maxRestarts: config.maxRestarts ?? 0,
     restartDelaySeconds: config.restartDelaySeconds ?? 2,
+    stopCommand: config.stopCommand ?? "",
     stopSignal: config.stopSignal ?? "SIGTERM",
     stopTimeoutSeconds: config.stopTimeoutSeconds ?? 10,
   };
@@ -78,6 +81,7 @@ export function daemonFormToConfig(v: DaemonFormValue): DaemonConfig {
     restartPolicy: v.restartPolicy,
     maxRestarts: v.maxRestarts,
     restartDelaySeconds: v.restartDelaySeconds,
+    stopCommand: v.stopCommand.trim(),
     stopSignal: v.stopSignal,
     stopTimeoutSeconds: v.stopTimeoutSeconds,
   };
@@ -227,14 +231,14 @@ export function DaemonForm({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Restart policy">
+          <Field label={t.runtimes.daemonForm.restartPolicy}>
             <Select value={value.restartPolicy} onChange={(e) => set("restartPolicy", e.target.value as DaemonFormValue["restartPolicy"])}>
               <option value="never">{t.runtimes.daemonForm.policyNever}</option>
               <option value="on-failure">{t.runtimes.daemonForm.policyOnFailure}</option>
               <option value="always">{t.runtimes.daemonForm.policyAlways}</option>
             </Select>
           </Field>
-          <Field label="Max restarts (0 = unlimited)">
+          <Field label={t.runtimes.daemonForm.maxRestarts}>
             <Input
                 type="number"
                 min={0}
@@ -242,7 +246,7 @@ export function DaemonForm({
                 onChange={(e) => set("maxRestarts", Number(e.target.value))}
             />
           </Field>
-          <Field label="Restart delay (seconds)">
+          <Field label={t.runtimes.daemonForm.restartDelay}>
             <Input
                 type="number"
                 min={1}
@@ -250,13 +254,36 @@ export function DaemonForm({
                 onChange={(e) => set("restartDelaySeconds", Number(e.target.value))}
             />
           </Field>
-          <Field label="Stop timeout (seconds)">
+          <Field label={t.runtimes.daemonForm.stopTimeout}>
             <Input
                 type="number"
                 min={1}
                 value={value.stopTimeoutSeconds}
                 onChange={(e) => set("stopTimeoutSeconds", Number(e.target.value))}
             />
+          </Field>
+        </div>
+
+        {/* How the daemon is asked to shut down. Console-driven software
+          often only exits cleanly on a word typed at its prompt. */}
+        <div className="grid grid-cols-2 gap-4">
+          <Field label={t.runtimes.daemonForm.stopCommand}>
+            <Input
+                className="font-mono"
+                value={value.stopCommand}
+                onChange={(e) => set("stopCommand", e.target.value)}
+                placeholder={t.runtimes.daemonForm.stopCommandPlaceholder}
+            />
+            <p className="mt-1 text-[11px] text-ink-dim">{t.runtimes.daemonForm.stopCommandHint}</p>
+          </Field>
+          <Field label={t.runtimes.daemonForm.stopSignal}>
+            <Select value={value.stopSignal} onChange={(e) => set("stopSignal", e.target.value)}>
+              <option value="SIGTERM">SIGTERM — {t.runtimes.daemonForm.signalTerm}</option>
+              <option value="SIGINT">SIGINT — {t.runtimes.daemonForm.signalInt}</option>
+              <option value="SIGQUIT">SIGQUIT</option>
+              <option value="SIGHUP">SIGHUP</option>
+            </Select>
+            <p className="mt-1 text-[11px] text-ink-dim">{t.runtimes.daemonForm.stopSignalHint}</p>
           </Field>
         </div>
 
