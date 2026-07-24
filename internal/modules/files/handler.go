@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/runix/runix/internal/modules/rbac"
 
 	"github.com/runix/runix/internal/modules/agents"
 	"github.com/runix/runix/internal/modules/audit"
@@ -34,7 +35,10 @@ func (h *Handler) authorize(c *gin.Context, perm string) bool {
 		httpx.Unauthorized(c, "authentication required")
 		return false
 	}
-	allowed, err := h.check(c.Request.Context(), p.UserID, perm, runtimes.ServerTarget(c.Param("id")))
+
+	// Convert Target to rbac.Scope for proper permission checking
+	scope := rbac.ServerScope(c.Param("id"))
+	allowed, err := h.check(c.Request.Context(), p.UserID, perm, scope)
 	if err != nil {
 		_ = c.Error(err)
 		httpx.Internal(c)

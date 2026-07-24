@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/runix/runix/internal/modules/rbac"
 
 	rtdomain "github.com/runix/runix/internal/domain/runtime"
 	"github.com/runix/runix/internal/modules/agents"
@@ -31,8 +32,8 @@ type Target struct {
 func ServerTarget(serverID string) Target { return Target{ServerID: serverID} }
 
 // PermissionCheck answers a scoped permission question; the app wires it to
-// the rbac service.
-type PermissionCheck func(ctx context.Context, userID, perm string, target Target) (bool, error)
+// the rbac service. Accepts rbac.Scope for proper comparison with stored grants.
+type PermissionCheck func(ctx context.Context, userID, perm string, scope rbac.Scope) (bool, error)
 
 type Handler struct {
 	hub     *agents.Hub
@@ -77,8 +78,17 @@ func (h *Handler) authorizeTarget(c *gin.Context, target Target, perms ...string
 		httpx.Unauthorized(c, "authentication required")
 		return false
 	}
+
+	// Convert runtimes.Target to rbac.Scope for proper permission checking
+	var scope rbac.Scope
+	if target.RuntimeType != "" && target.RuntimeID != "" {
+		scope = rbac.RuntimeScope(target.ServerID, target.RuntimeType, target.RuntimeID)
+	} else {
+		scope = rbac.ServerScope(target.ServerID)
+	}
+
 	for _, perm := range perms {
-		allowed, err := h.check(c.Request.Context(), p.UserID, perm, target)
+		allowed, err := h.check(c.Request.Context(), p.UserID, perm, scope)
 		if err != nil {
 			_ = c.Error(err)
 			httpx.Internal(c)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/runix/runix/internal/modules/rbac"
 
 	"github.com/runix/runix/internal/modules/agents"
 	"github.com/runix/runix/internal/modules/audit"
@@ -39,12 +40,16 @@ func (h *Handler) authorize(c *gin.Context, readOnly bool) bool {
 		httpx.Unauthorized(c, "authentication required")
 		return false
 	}
+
+	// Convert Target to rbac.Scope for proper permission checking
+	scope := rbac.ServerScope(c.Param("id"))
+
 	perms := []string{"docker.manage", "runtime.manage"}
 	if readOnly {
 		perms = append(perms, "server.view")
 	}
 	for _, perm := range perms {
-		allowed, err := h.check(c.Request.Context(), p.UserID, perm, runtimes.ServerTarget(c.Param("id")))
+		allowed, err := h.check(c.Request.Context(), p.UserID, perm, scope)
 		if err != nil {
 			_ = c.Error(err)
 			httpx.Internal(c)

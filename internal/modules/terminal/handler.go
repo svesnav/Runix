@@ -9,6 +9,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/gin-gonic/gin"
+	"github.com/runix/runix/internal/modules/rbac"
 
 	"github.com/runix/runix/internal/modules/agents"
 	"github.com/runix/runix/internal/modules/audit"
@@ -58,11 +59,15 @@ func (h *Handler) WS(c *gin.Context) {
 	}
 	// A terminal into a runtime is checked against that runtime, so a
 	// runtime-scoped grant is enough to open it.
-	allowed, err := h.check(c.Request.Context(), p.UserID, perm, runtimes.Target{
-		ServerID:    c.Param("id"),
-		RuntimeType: c.Query("type"),
-		RuntimeID:   c.Query("rid"),
-	})
+	// Convert Target to rbac.Scope for proper permission checking
+	var scope rbac.Scope
+	if c.Query("type") != "" && c.Query("rid") != "" {
+		scope = rbac.RuntimeScope(c.Param("id"), c.Query("type"), c.Query("rid"))
+	} else {
+		scope = rbac.ServerScope(c.Param("id"))
+	}
+
+	allowed, err := h.check(c.Request.Context(), p.UserID, perm, scope)
 	if err != nil {
 		httpx.Internal(c)
 		return

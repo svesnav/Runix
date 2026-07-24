@@ -148,6 +148,85 @@ func TestCheckCachesAndInvalidates(t *testing.T) {
 	}
 }
 
+// TestCheckRoleScopedGrant verifies that grants assigned to roles work correctly.
+// This tests the fix for the database constraint that now supports 'role' as a
+// subject type in grants.
+func TestCheckRoleScopedGrant(t *testing.T) {
+	repo := &fakeRepo{grants: map[string][]Grant{
+		"u1": {{SubjectType: SubjectRole, SubjectID: "role-operator", Permission: PermServerView,
+			ScopeType: ScopeServer, ScopeID: "srv-1"}},
+	}}
+	svc := newTestService(repo, nil)
+
+	ok, _ := svc.Check(context.Background(), "u1", PermServerView, ServerScope("srv-1"))
+	if !ok {
+		t.Fatal("role-scoped grant denied for matching server")
+	}
+	ok, _ = svc.Check(context.Background(), "u1", PermServerView, ServerScope("srv-2"))
+	if ok {
+		t.Fatal("role-scoped grant allowed for non-matching server")
+	}
+}
+
+// TestCheckRoleGlobalGrant verifies that grants assigned to roles with global
+// scope work correctly.
+func TestCheckRoleGlobalGrant(t *testing.T) {
+	repo := &fakeRepo{grants: map[string][]Grant{
+		"u1": {{SubjectType: SubjectRole, SubjectID: "role-admin", Permission: PermServerView,
+			ScopeType: ScopeGlobal, ScopeID: ""}},
+	}}
+	svc := newTestService(repo, nil)
+
+	// Global grant should satisfy any scope check
+	ok, _ := svc.Check(context.Background(), "u1", PermServerView, GlobalScope)
+	if !ok {
+		t.Fatal("global role grant denied")
+	}
+	ok, _ = svc.Check(context.Background(), "u1", PermServerView, ServerScope("srv-1"))
+	if !ok {
+		t.Fatal("global role grant should cover server scope")
+	}
+}
+
+// TestCheckUserGrantPrecedence verifies that user-specific grants take
+// precedence over role-based grants.
+func TestCheckUserGrantPrecedence(t *testing.T) {
+	repo := &fakeRepo{grants: map[string][]Grant{
+		"u1": {
+			{SubjectType: SubjectRole, SubjectID: "role-operator", Permission: PermServerView,
+				ScopeType: ScopeServer, ScopeID: "srv-1"},
+			{SubjectType: SubjectUser, SubjectID: "u1", Permission: PermServerView,
+				ScopeType: ScopeServer, ScopeID: "srv-1"},
+		},
+	}}
+	svc := newTestService(repo, nil)
+
+	// Both grants should allow access
+	ok, _ := svc.Check(context.Background(), "u1", PermServerView, ServerScope("srv-1"))
+	if !ok {
+		t.Fatal("user with both role and user grants denied")
+	}
+}
+
+// TestCheckGroupGrantPrecedence verifies that group-based grants work correctly
+// alongside user and role grants.
+func TestCheckGroupGrantPrecedence(t *testing.T) {
+	repo := &fakeRepo{grants: map[string][]Grant{
+		"u1": {{SubjectType: SubjectGroup, SubjectID: "group-devs", Permission: PermServerView,
+			ScopeType: ScopeServer, ScopeID: "srv-1"}},
+	}}
+	svc := newTestService(repo, nil)
+
+	ok, _ := svc.Check(context.Background(), "u1", PermServerView, ServerScope("srv-1"))
+	if !ok {
+		t.Fatal("group-scoped grant denied")
+	}
+	ok, _ = svc.Check(context.Background(), "u1", PermServerView, ServerScope("srv-2"))
+	if ok {
+		t.Fatal("group-scoped grant allowed for non-member server")
+	}
+}
+
 func TestCreateGrantValidation(t *testing.T) {
 	svc := newTestService(&fakeRepo{}, nil)
 	ctx := context.Background()

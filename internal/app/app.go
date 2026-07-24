@@ -128,26 +128,20 @@ func Run(ctx context.Context, cfg config.Server, log *slog.Logger) error {
 	// A request addressing one runtime is checked against that runtime
 	// first, then falls back to the server. Without the first check a
 	// runtime-scoped grant would be stored and never honored.
-	serverPermCheck := func(ctx context.Context, userID, perm string, target runtimes.Target) (bool, error) {
-		if target.RuntimeType != "" && target.RuntimeID != "" {
-			allowed, err := rbacSvc.Check(ctx, userID, perm,
-				rbac.RuntimeScope(target.ServerID, target.RuntimeType, target.RuntimeID))
-			if err != nil || allowed {
-				return allowed, err
-			}
-		}
-		return rbacSvc.Check(ctx, userID, perm, rbac.ServerScope(target.ServerID))
+	// Permission check expects rbac.Scope for proper comparison with stored grants
+	permissionCheck := func(ctx context.Context, userID, perm string, scope rbac.Scope) (bool, error) {
+		return rbacSvc.Check(ctx, userID, perm, scope)
 	}
-	runtimes.RegisterRoutes(protected, runtimes.NewHandler(hub, serverPermCheck, auditSvc))
-	dockerres.RegisterRoutes(protected, dockerres.NewHandler(hub, serverPermCheck, auditSvc))
-	files.RegisterRoutes(protected, files.NewHandler(hub, serverPermCheck, auditSvc))
-	terminal.RegisterRoutes(protected, terminal.NewHandler(hub, serverPermCheck, auditSvc))
+	runtimes.RegisterRoutes(protected, runtimes.NewHandler(hub, permissionCheck, auditSvc))
+	dockerres.RegisterRoutes(protected, dockerres.NewHandler(hub, permissionCheck, auditSvc))
+	files.RegisterRoutes(protected, files.NewHandler(hub, permissionCheck, auditSvc))
+	terminal.RegisterRoutes(protected, terminal.NewHandler(hub, permissionCheck, auditSvc))
 	metrics.RegisterRoutes(protected, metrics.NewHandler(serverSvc, eventBus), rbacSvc.RequireServer)
 	dashboard.RegisterRoutes(protected, dashboard.NewHandler(dashSvc, serverSvc, hub), rbacSvc.Require)
 	notifications.RegisterRoutes(protected, notifications.NewHandler(eventBus), rbacSvc.Require)
 	scheduler.RegisterRoutes(protected, scheduler.NewHandler(schedulerSvc, auditSvc), rbacSvc.Require)
 	backup.RegisterRoutes(protected, backup.NewHandler(backupSvc, auditSvc), rbacSvc.Require)
-	plugins.RegisterRoutes(protected, plugins.NewHandler(hub, serverPermCheck), rbacSvc.Require)
+	plugins.RegisterRoutes(protected, plugins.NewHandler(hub, permissionCheck), rbacSvc.Require)
 
 	// Background workers.
 	go dashSvc.Run(ctx)
